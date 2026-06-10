@@ -1,0 +1,8 @@
+{
+  "name": "huygen-studios-website",
+  "private": true,
+  "workspaces": [
+    "huygen-studios"
+  ]
+}
+
