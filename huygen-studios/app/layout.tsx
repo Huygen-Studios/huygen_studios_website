@@ -125,6 +125,9 @@ export const metadata: Metadata = {
   verification: {
     google: "add-your-google-site-verification-here", // REPLACE with actual tag
   },
+  other: {
+    "google-adsense-account": "ca-pub-8445677452089736",
+  },
 };
 
 const jsonLd = {
