@@ -1,3 +1,4 @@
+process.env.NAPI_RS_FORCE_WASI = '1';
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
