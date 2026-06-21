@@ -1,7 +1,14 @@
 process.env.NAPI_RS_FORCE_WASI = '1';
+import { dirname } from "node:path";
+import { fileURLToPath } from "node:url";
 import type { NextConfig } from "next";
 
+const appRoot = dirname(fileURLToPath(import.meta.url));
+
 const nextConfig: NextConfig = {
+  turbopack: {
+    root: dirname(appRoot),
+  },
   async headers() {
     return [
       {
