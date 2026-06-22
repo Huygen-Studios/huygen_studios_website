@@ -53,6 +53,7 @@ const NAV_LINKS: NavItem[] = [
   },
   { label: "Pricing", href: "/pricing" },
   { label: "Blog", href: "/blog" },
+  { label: "Contact", href: "/contact" },
 ];
 
 export function SiteNav() {
@@ -78,7 +79,7 @@ export function SiteNav() {
           "transition-all duration-500 ease-out",
           "w-[calc(100%-2rem)] max-w-6xl",
           scrolled
-            ? "bg-[#0a0a0a]/70 backdrop-blur-2xl border border-white/[0.08] shadow-[inset_0_1px_0_rgba(255,255,255,0.1),0_20px_40px_-10px_rgba(0,0,0,0.5)]"
+            ? "bg-[#0a0a0a]/70 backdrop-blur-2xl border border-white/20 shadow-[inset_0_1px_0_rgba(255,255,255,0.1),0_20px_40px_-10px_rgba(0,0,0,0.5)]"
             : "bg-transparent border border-transparent"
         )}
       >

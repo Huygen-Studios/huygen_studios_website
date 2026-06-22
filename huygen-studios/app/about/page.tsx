@@ -33,7 +33,7 @@ export default function AboutPage() {
             </span>
           </h1>
           <p className="text-lg md:text-xl text-white/50 max-w-2xl mx-auto leading-relaxed">
-            Huygen Studios is a premium digital agency specializing in intelligent AI automation, voice agents, and cinematic web experiences. We don&apos;t just build software; we build autonomous revenue engines.
+            Huygen Studios is a premium AI automation agency specializing in intelligent systems, voice agents, and cinematic web experiences. We don&apos;t just build software; we build autonomous revenue engines.
           </p>
         </motion.div>
 

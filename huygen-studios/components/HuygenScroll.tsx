@@ -53,7 +53,7 @@ const PRELOAD_AHEAD = 90;
 const PRIORITY_RANGE = 120;
 const MAX_CONCURRENT_LOADS = 6;
 const MAX_DECODED_FRAMES = 360;
-const DEBUG_SEQUENCE = process.env.NODE_ENV === "development";
+const DEBUG_SEQUENCE = false;
 
 const clamp = (value: number, min: number, max: number) =>
   Math.min(max, Math.max(min, value));

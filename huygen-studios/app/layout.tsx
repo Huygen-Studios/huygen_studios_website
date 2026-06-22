@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import Script from "next/script";
 import { Space_Grotesk, JetBrains_Mono } from "next/font/google";
+import { Footer } from "@/components/Footer";
 import "./globals.css";
 
 
@@ -165,6 +166,7 @@ export default function RootLayout({
       </head>
       <body className="font-body text-white bg-[#050505]">
         {children}
+        <Footer />
         {googleAnalyticsId ? (
           <>
             <Script
