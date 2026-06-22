@@ -60,7 +60,10 @@ export default function PrivacyPolicyPage() {
 
           <h2 className="text-2xl font-semibold text-white mt-10 mb-4">5. Advertising & Analytics</h2>
           <p>
-            We may use third-party advertising companies to serve ads when you visit the Site. These companies may use information about your visits to the Site and other websites that are contained in web cookies in order to provide advertisements about goods and services of interest to you.
+            We may use third-party advertising companies to serve ads when you visit the Site. Third party vendors, including Google, use cookies to serve ads based on a user's prior visits to our website or other websites.
+          </p>
+          <p>
+            Google's use of advertising cookies enables it and its partners to serve ads to our users based on their visit to our site and/or other sites on the Internet. You may opt out of personalized advertising by visiting <a href="https://myadcenter.google.com/" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline">Google Ads Settings</a>.
           </p>
           <p>
             We may also partner with selected third-party vendors, such as Google Analytics, to allow tracking technologies and remarketing services on the Site through the use of first-party cookies and third-party cookies. By accessing the Site, you consent to the collection and use of your information by these third-party vendors.
