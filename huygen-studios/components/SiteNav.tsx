@@ -53,6 +53,7 @@ const NAV_LINKS: NavItem[] = [
   },
   { label: "Pricing", href: "/pricing" },
   { label: "Blog", href: "/blog" },
+  { label: "Creatives", href: "/creatives" },
   { label: "Contact", href: "/contact" },
 ];
 
