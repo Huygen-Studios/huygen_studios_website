@@ -127,7 +127,7 @@ export const metadata: Metadata = {
     google: "add-your-google-site-verification-here", // REPLACE with actual tag
   },
   other: {
-    "google-adsense-account": "ca-pub-7339293091446973",
+    "google-adsense-account": "ca-pub-1790543418739606",
   },
 };
 
