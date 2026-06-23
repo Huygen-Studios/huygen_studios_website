@@ -6,6 +6,7 @@ import type { NextConfig } from "next";
 const appRoot = dirname(fileURLToPath(import.meta.url));
 
 const nextConfig: NextConfig = {
+  transpilePackages: ['three', '@react-three/drei', '@react-three/fiber'],
   turbopack: {
     root: dirname(appRoot),
   },

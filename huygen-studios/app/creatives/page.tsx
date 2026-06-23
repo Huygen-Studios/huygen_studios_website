@@ -5,9 +5,16 @@ import LiquidGlass from '@/components/creatives/LiquidGlass'
 import ParticlePathHero from '@/components/creatives/ParticlePathHero'
 import GallerySection from '@/components/creatives/GallerySection'
 import CinematicEnterOverlay from '@/components/creatives/CinematicEnterOverlay'
+import DigitalistsServices from '@/components/creatives/DigitalistsServices'
 import useGsapSmoothScroll from '@/hooks/creatives/useGsapSmoothScroll'
 import { audioManager } from '@/lib/creatives/audioManager'
+import dynamic from 'next/dynamic'
 import './creatives.css'
+
+const AntigravityTestimonials = dynamic(
+  () => import('@/components/creatives/AntigravityTestimonials'),
+  { ssr: false }
+)
 
 export default function CreativesPage() {
   const [entered, setEntered] = useState(false)
@@ -163,6 +170,16 @@ export default function CreativesPage() {
       {/* Section 2: Sphere/Grid Gallery */}
       <section className="relative w-full h-screen overflow-hidden bg-black">
         <GallerySection isPlaying={isPlaying} toggleAudio={toggleAudio} />
+      </section>
+
+      {/* Section 3: Services */}
+      <section className="relative w-full overflow-hidden bg-black">
+        <DigitalistsServices />
+      </section>
+
+      {/* Section 4: Antigravity Testimonials */}
+      <section className="relative w-full h-screen overflow-hidden bg-black">
+        <AntigravityTestimonials />
       </section>
     </main>
   )
