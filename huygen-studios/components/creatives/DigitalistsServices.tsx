@@ -62,12 +62,12 @@ export default function DigitalistsServices() {
       trigger: containerRef.current,
       pin: true,
       start: 'top top',
-      end: '+=4000', // Pins for 4000px of scroll
+      end: '+=8000', // Pins for 8000px of scroll for a smoother, longer scroll experience
       snap: {
         snapTo: 1 / (services.length - 1),
-        duration: 0.3,
-        delay: 0.05,
-        ease: 'power2.inOut'
+        duration: { min: 0.4, max: 1.0 },
+        delay: 0.1,
+        ease: 'power1.inOut'
       },
       onUpdate: (self) => {
         let newIndex = Math.round(self.progress * (services.length - 1))
@@ -87,30 +87,30 @@ export default function DigitalistsServices() {
 
   const handleNavClick = (idx: number) => {
     if (containerRef.current) {
-      const scrollDistance = 4000
+      const scrollDistance = 8000
       const targetScrollY = containerRef.current.offsetTop + (idx / (services.length - 1)) * scrollDistance
       window.scrollTo({ top: targetScrollY, behavior: 'smooth' })
     }
   }
 
   return (
-    // We use a light grey background theme #e5e5e5 to strictly match the reference site
-    <div ref={containerRef} className="relative w-full h-screen bg-[#f5f5f5] text-black overflow-hidden flex flex-col lg:flex-row items-center px-6 lg:px-24 py-16 lg:py-0">
+    // We use a dark background theme #050505 to strictly match the main site theme
+    <div ref={containerRef} className="relative w-full h-screen bg-[#050505] text-white overflow-hidden flex flex-col lg:flex-row items-center px-6 lg:px-24 py-16 lg:py-0">
         
         {/* Left Sidebar: Navigation List (approx 30% width) */}
         <div className="relative z-20 w-full lg:w-[35%] flex flex-col justify-center h-full pt-12 lg:pt-0">
-          <h2 className="text-3xl lg:text-5xl font-black text-black mb-12 tracking-tight">Our Services</h2>
+          <h2 className="text-3xl lg:text-5xl font-black text-white mb-12 tracking-tight">Our Services</h2>
           <ul className="space-y-4 lg:space-y-5">
             {services.map((service, idx) => {
               const isActive = activeIndex === idx
               return (
                 <li key={idx} className="relative flex items-center group cursor-pointer" onClick={() => handleNavClick(idx)}>
-                  <div className={`w-8 h-8 flex items-center justify-center mr-2 transition-opacity duration-300 ${isActive ? 'opacity-100 text-black' : 'opacity-0'}`}>
+                  <div className={`w-8 h-8 flex items-center justify-center mr-2 transition-opacity duration-300 ${isActive ? 'opacity-100 text-white' : 'opacity-0'}`}>
                     <ArrowRight strokeWidth={3} className="w-5 h-5" />
                   </div>
                   <button 
                     className={`text-xl lg:text-2xl font-bold transition-all duration-300 text-left
-                      ${isActive ? 'text-black translate-x-2' : 'text-black/30 group-hover:text-black/60'}`}
+                      ${isActive ? 'text-white translate-x-2' : 'text-white/30 group-hover:text-white/60'}`}
                   >
                     {service.title}
                   </button>
@@ -125,7 +125,7 @@ export default function DigitalistsServices() {
           
           {/* Main Slogan above the active cards */}
           <div className="absolute top-24 lg:top-32 right-0 lg:right-24 z-30 text-right">
-            <h3 className="text-black text-3xl lg:text-5xl font-black uppercase tracking-tight leading-tight">
+            <h3 className="text-white text-3xl lg:text-5xl font-black uppercase tracking-tight leading-tight">
               What we do <br />
               <span className="font-light">is what we love</span>
             </h3>
@@ -143,7 +143,7 @@ export default function DigitalistsServices() {
                   scale: activeIndex === i ? 1 : 0.95,
                   y: activeIndex === i ? 0 : 40,
                 }}
-                transition={{ duration: 0.8, ease: "easeOut" }}
+                transition={{ type: "spring", stiffness: 40, damping: 15 }}
                 style={{ zIndex: activeIndex === i ? 5 : 0 }}
               >
                 <img
@@ -169,14 +169,14 @@ export default function DigitalistsServices() {
                     scale: isActive ? 1 : 0.95,
                     zIndex: isActive ? 10 : 0,
                   }}
-                  transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }} // Spring-like ease
-                  className="absolute bottom-0 right-0 w-full bg-white/90 backdrop-blur-xl p-8 lg:p-12 shadow-[0_30px_60px_rgba(0,0,0,0.1)] rounded-xl border border-black/5"
+                  transition={{ type: "spring", stiffness: 50, damping: 20 }}
+                  className="absolute bottom-0 right-0 w-full bg-white/5 backdrop-blur-xl p-8 lg:p-12 shadow-[0_30px_60px_rgba(0,0,0,0.5)] rounded-xl border border-white/10"
                   style={{ pointerEvents: isActive ? 'auto' : 'none' }}
                 >
-                  <h3 className="text-2xl lg:text-3xl font-black text-black mb-6 tracking-tight">
+                  <h3 className="text-2xl lg:text-3xl font-black text-white mb-6 tracking-tight">
                     {service.title}
                   </h3>
-                  <p className="text-black/70 text-lg lg:text-xl leading-relaxed">
+                  <p className="text-white/70 text-lg lg:text-xl leading-relaxed">
                     {service.description}
                   </p>
                 </motion.div>
