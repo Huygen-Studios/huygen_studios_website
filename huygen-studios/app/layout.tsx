@@ -159,6 +159,7 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${displayFont.variable} ${bodyFont.variable} antialiased`} suppressHydrationWarning>
       <head>
+        <meta name="google-adsense-account" content="ca-pub-1790543418739606" />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}

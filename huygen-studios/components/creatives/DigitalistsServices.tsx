@@ -9,42 +9,42 @@ import { ArrowRight } from 'lucide-react'
 const services = [
   {
     title: 'Branding & Design',
-    description: 'Wir entwickeln starke Markenidentitäten für Unternehmen in Österreich – von Logo und Corporate Design bis zur klaren Markenbotschaft. Als Agentur gestalten wir Brandings und Designs, die messbar wirken und im Gedächtnis bleiben.',
+    description: 'We develop strong brand identities for businesses – from logo and corporate design to clear brand messaging. As an agency, we create brandings and designs that have a measurable impact and stay in memory.',
     image: 'https://images.unsplash.com/photo-1626785774573-4b799315345d?auto=format&fit=crop&q=80&w=2000'
   },
   {
     title: 'Websites & E-Commerce',
-    description: 'Wir entwickeln individuelle Websites und Webshops für Unternehmen in Österreich – von modernem Webdesign bis zu leistungsstarken E-Commerce-Lösungen. Als Digitalagentur erstellen wir schnelle, benutzerfreundliche und SEO-optimierte Websites.',
+    description: 'We develop custom websites and webshops for businesses – from modern web design to high-performance e-commerce solutions. As a digital agency, we build fast, user-friendly, and SEO-optimized websites.',
     image: 'https://images.unsplash.com/photo-1547658719-da2b51169166?auto=format&fit=crop&q=80&w=2000'
   },
   {
     title: 'Online Marketing',
-    description: 'Wir unterstützen Unternehmen mit SEO, Google Ads und Social Media Marketing. Laufend optimieren wir Kampagnen und sorgen für mehr Sichtbarkeit, qualifizierte Leads und messbares Wachstum.',
+    description: 'We support businesses with SEO, Google Ads, and Social Media Marketing. We continuously optimize campaigns and ensure more visibility, qualified leads, and measurable growth.',
     image: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&q=80&w=2000'
   },
   {
     title: 'Platforms & Development',
-    description: 'Wir entwickeln individuelle Webanwendungen für Unternehmen in Österreich – von der Konzeption bis zur Umsetzung. Als Digitalagentur realisieren wir skalierbare, performante Lösungen mit modernem Design.',
+    description: 'We develop custom web applications for businesses – from concept to implementation. As a digital agency, we build scalable, high-performance solutions with modern design.',
     image: 'https://images.unsplash.com/photo-1555066931-4365d14bab8c?auto=format&fit=crop&q=80&w=2000'
   },
   {
     title: 'AI & Automation',
-    description: 'Wir optimieren Geschäftsprozesse mit KI und Automatisierung für Unternehmen in Österreich. Für mehr Effizienz, weniger Aufwand und nachhaltiges Wachstum.',
+    description: 'We optimize business processes with AI and automation for businesses. For more efficiency, less effort, and sustainable growth.',
     image: 'https://images.unsplash.com/photo-1677442136019-21780ecad995?auto=format&fit=crop&q=80&w=2000'
   },
   {
     title: 'Strategy & Consulting',
-    description: 'Als Agentur in Österreich entwickeln wir Strategien und begleiten Unternehmen von der Planung bis zur Umsetzung. Für nachhaltigen digitalen Erfolg.',
+    description: 'As an agency, we develop strategies and guide businesses from planning to implementation. For sustainable digital success.',
     image: 'https://images.unsplash.com/photo-1552664730-d307ca884978?auto=format&fit=crop&q=80&w=2000'
   },
   {
     title: 'Tracking & Analytics',
-    description: 'Wir setzen Tracking und Web Analytics ein, um digitale Performance messbar zu machen und Potenziale zu erkennen. Für datenbasierte Entscheidungen und bessere Ergebnisse.',
+    description: 'We use tracking and web analytics to make digital performance measurable and identify potentials. For data-driven decisions and better results.',
     image: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&q=80&w=2000'
   },
   {
     title: 'Print & Cross-Media',
-    description: 'Analog und digital sind für uns keine Gegensätze, sondern ergänzen sich perfekt. Wir kümmern uns um Printprodukte, die perfekt zu Ihrer Corporate Identity passen.',
+    description: 'Analog and digital are not opposites for us, but perfectly complement each other. We take care of print products that perfectly match your corporate identity.',
     image: 'https://images.unsplash.com/photo-1562564055-71e051d33c19?auto=format&fit=crop&q=80&w=2000'
   }
 ]
@@ -87,9 +87,8 @@ export default function DigitalistsServices() {
 
   const handleNavClick = (idx: number) => {
     if (containerRef.current) {
-      const scrollHeight = containerRef.current.scrollHeight
-      const windowHeight = window.innerHeight
-      const targetScrollY = containerRef.current.offsetTop + (idx / services.length) * (scrollHeight - windowHeight)
+      const scrollDistance = 4000
+      const targetScrollY = containerRef.current.offsetTop + (idx / (services.length - 1)) * scrollDistance
       window.scrollTo({ top: targetScrollY, behavior: 'smooth' })
     }
   }
@@ -100,7 +99,7 @@ export default function DigitalistsServices() {
         
         {/* Left Sidebar: Navigation List (approx 30% width) */}
         <div className="relative z-20 w-full lg:w-[35%] flex flex-col justify-center h-full pt-12 lg:pt-0">
-          <h2 className="text-3xl lg:text-5xl font-black text-black mb-12 tracking-tight">Leistungen</h2>
+          <h2 className="text-3xl lg:text-5xl font-black text-black mb-12 tracking-tight">Our Services</h2>
           <ul className="space-y-4 lg:space-y-5">
             {services.map((service, idx) => {
               const isActive = activeIndex === idx
@@ -177,14 +176,9 @@ export default function DigitalistsServices() {
                   <h3 className="text-2xl lg:text-3xl font-black text-black mb-6 tracking-tight">
                     {service.title}
                   </h3>
-                  <p className="text-black/70 text-lg lg:text-xl leading-relaxed mb-8">
+                  <p className="text-black/70 text-lg lg:text-xl leading-relaxed">
                     {service.description}
                   </p>
-                  
-                  <button className="flex items-center text-sm lg:text-base font-bold text-black uppercase tracking-widest hover:text-black/60 transition-colors duration-300">
-                    Mehr zu {service.title}
-                    <ArrowRight className="ml-3 w-5 h-5" />
-                  </button>
                 </motion.div>
               )
             })}
