@@ -9,6 +9,7 @@ import DigitalistsServices from '@/components/creatives/DigitalistsServices'
 import useGsapSmoothScroll from '@/hooks/creatives/useGsapSmoothScroll'
 import { audioManager } from '@/lib/creatives/audioManager'
 import dynamic from 'next/dynamic'
+import Link from 'next/link'
 import './creatives.css'
 
 const AntigravityTestimonials = dynamic(
@@ -140,8 +141,9 @@ export default function CreativesPage() {
           className="navbar absolute top-[8vh] w-full z-50"
         >
           <div className="nav-links">
-            <a href="#">Work</a>
+            <Link href="/creatives/work">Work</Link>
             <a href="#">Services</a>
+            <Link href="/creatives/blogs">Blogs</Link>
             <a href="#">Contact</a>
             <a href="#" onClick={toggleAudio}>Sound [{isPlaying ? 'ON' : 'OFF'}]</a>
           </div>
