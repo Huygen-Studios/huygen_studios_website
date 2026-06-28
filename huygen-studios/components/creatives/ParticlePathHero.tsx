@@ -712,12 +712,12 @@ export default function ParticlePathHero({ debugPath = false, isEntered = false 
           className="absolute inset-0 z-10 flex items-center justify-center pointer-events-none"
           style={{ x: textX, y: textY }}
         >
-          <div className="text-container">
+          <div className="text-container flex flex-col items-center">
             <motion.h1 
               initial={{ y: 80, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               transition={{ duration: 2, ease: [0.2, 0.8, 0.2, 1], delay: 0.5 }}
-              className="text-white huge-text-line self-start line-huygen"
+              className="text-white huge-text-line self-start line-huygen leading-none"
             >
               huygen
             </motion.h1>
@@ -725,10 +725,20 @@ export default function ParticlePathHero({ debugPath = false, isEntered = false 
               initial={{ y: 80, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               transition={{ duration: 2, ease: [0.2, 0.8, 0.2, 1], delay: 0.5 }}
-              className="text-white huge-text-line self-end line-creatives"
+              className="text-white huge-text-line self-end line-creatives leading-none"
             >
               creatives
             </motion.h1>
+            
+            {/* New Who It's For Subtitle */}
+            <motion.p
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 1.5, delay: 1, ease: [0.2, 0.8, 0.2, 1] }}
+              className="mt-6 text-white/80 text-lg md:text-xl max-w-2xl text-center font-medium tracking-wide drop-shadow-md"
+            >
+              For SaaS founders, agencies, and brands that want cinematic experiences, not generic templates.
+            </motion.p>
           </div>
         </motion.div>
 

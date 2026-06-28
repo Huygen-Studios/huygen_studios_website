@@ -10,10 +10,16 @@ import useGsapSmoothScroll from '@/hooks/creatives/useGsapSmoothScroll'
 import { audioManager } from '@/lib/creatives/audioManager'
 import dynamic from 'next/dynamic'
 import Link from 'next/link'
+import { Footer } from '@/components/Footer'
 import './creatives.css'
 
-const AntigravityTestimonials = dynamic(
-  () => import('@/components/creatives/AntigravityTestimonials'),
+const VengenceTestimonials = dynamic(
+  () => import('@/components/creatives/VengenceTestimonials'),
+  { ssr: false }
+)
+
+const HuygenProducts = dynamic(
+  () => import('@/components/creatives/HuygenProducts'),
   { ssr: false }
 )
 
@@ -138,14 +144,18 @@ export default function CreativesPage() {
           initial={{ opacity: 0 }}
           animate={entered ? { opacity: 1 } : { opacity: 0 }}
           transition={{ duration: 1, delay: 0.5 }}
-          className="navbar absolute top-[8vh] w-full z-50"
+          className="navbar absolute top-[8vh] w-full z-50 flex justify-between items-center px-12 lg:px-24"
         >
-          <div className="nav-links">
+          <div className="nav-links flex gap-8">
             <Link href="/creatives/work">Work</Link>
-            <a href="#">Services</a>
+            <a href="#services">Services</a>
             <Link href="/creatives/blogs">Blogs</Link>
-            <a href="#">Contact</a>
-            <a href="#" onClick={toggleAudio}>Sound [{isPlaying ? 'ON' : 'OFF'}]</a>
+            <a href="#contact">Contact</a>
+          </div>
+          <div className="nav-sound pointer-events-auto">
+            <button onClick={toggleAudio} className="text-white/70 hover:text-white transition-colors text-xs font-medium uppercase tracking-widest border border-white/20 rounded-full px-4 py-2 bg-white/5 backdrop-blur-md">
+              Sound [{isPlaying ? 'ON' : 'OFF'}]
+            </button>
           </div>
         </motion.nav>
 
@@ -153,18 +163,27 @@ export default function CreativesPage() {
           initial={{ opacity: 0 }}
           animate={entered ? { opacity: 1 } : { opacity: 0 }}
           transition={{ duration: 1, delay: 0.7 }}
-          className="layer-ui absolute bottom-[8vh] left-0 w-full z-50 pointer-events-none"
+          className="layer-ui absolute bottom-[8vh] left-0 w-full z-50 pointer-events-none px-12 lg:px-24"
         >
           <div className="bottom-content flex justify-between items-end w-full pointer-events-none">
-            <p className="subtitle text-white/50 text-[1.05rem] max-w-[340px] select-none pointer-events-auto font-medium">
-              Mind-bending websites, smooth SaaS animations, and creative digital products.
-            </p>
+            {/* Kept empty on left to balance the design since subtitle moved to center */}
+            <div className="hidden lg:block w-[340px]"></div>
             
-            <LiquidGlass className="rounded-[100px] pointer-events-auto" color="white" blur={16} button>
-              <a href="#" className="px-12 py-5 text-[1.1rem] text-white font-medium block">
-                Start a project
+            <div className="flex items-center gap-8 pointer-events-auto">
+              <a href="#contact" className="text-white/70 hover:text-white transition-colors text-lg font-medium underline underline-offset-4 decoration-white/30 hover:decoration-white hidden sm:block">
+                Let's talk →
               </a>
-            </LiquidGlass>
+              <a 
+                href="#project" 
+                className="group relative inline-flex items-center justify-center gap-4 px-10 py-4 bg-gradient-to-r from-[#ab71f8] to-violet-700 text-white rounded-full font-bold text-lg overflow-hidden transition-all duration-300 hover:scale-105 hover:shadow-[0_0_40px_rgba(171,113,248,0.6)] active:scale-95 shadow-[0_0_20px_rgba(171,113,248,0.3)] border border-white/10"
+              >
+                <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-500 ease-out z-0" />
+                <span className="relative z-10">Initiate Project</span>
+                <div className="relative z-10 w-8 h-8 bg-white/20 text-white rounded-full flex items-center justify-center backdrop-blur-sm group-hover:bg-white group-hover:text-[#ab71f8] transition-colors duration-500">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="-rotate-45 group-hover:rotate-0 transition-transform duration-500"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+                </div>
+              </a>
+            </div>
           </div>
         </motion.div>
       </section>
@@ -179,10 +198,18 @@ export default function CreativesPage() {
         <DigitalistsServices />
       </section>
 
-      {/* Section 4: Antigravity Testimonials */}
+      {/* Section 4: Vengence Testimonials */}
       <section className="relative w-full h-screen overflow-hidden bg-black">
-        <AntigravityTestimonials />
+        <VengenceTestimonials />
       </section>
+
+      {/* Section 5: Products (Staggered Grid) */}
+      <section className="relative w-full overflow-hidden bg-black">
+        <HuygenProducts />
+      </section>
+
+      {/* Footer */}
+      <Footer />
     </main>
   )
 }

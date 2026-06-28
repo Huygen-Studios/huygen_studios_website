@@ -9,42 +9,50 @@ import { ArrowRight } from 'lucide-react'
 const services = [
   {
     title: 'Branding & Design',
-    description: 'We develop strong brand identities for businesses – from logo and corporate design to clear brand messaging. As an agency, we create brandings and designs that have a measurable impact and stay in memory.',
+    description: 'Transform your identity into a premium experience. Command higher prices with cinematic, memory-sticking designs.',
+    tag: 'Agencies & Brands',
     image: 'https://images.unsplash.com/photo-1626785774573-4b799315345d?auto=format&fit=crop&q=80&w=2000'
   },
   {
     title: 'Websites & E-Commerce',
-    description: 'We develop custom websites and webshops for businesses – from modern web design to high-performance e-commerce solutions. As a digital agency, we build fast, user-friendly, and SEO-optimized websites.',
+    description: 'Launch lightning-fast, highly-converting web apps that look like art and perform like engines.',
+    tag: 'Founders',
     image: 'https://images.unsplash.com/photo-1547658719-da2b51169166?auto=format&fit=crop&q=80&w=2000'
   },
   {
     title: 'Online Marketing',
-    description: 'We support businesses with SEO, Google Ads, and Social Media Marketing. We continuously optimize campaigns and ensure more visibility, qualified leads, and measurable growth.',
+    description: 'Stop guessing. Drive scalable growth, qualified leads, and measurable ROI with data-backed campaigns.',
+    tag: 'Growth',
     image: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&q=80&w=2000'
   },
   {
     title: 'Platforms & Development',
-    description: 'We develop custom web applications for businesses – from concept to implementation. As a digital agency, we build scalable, high-performance solutions with modern design.',
+    description: 'Build robust, scalable software architectures. We engineer solutions that grow seamlessly with your user base.',
+    tag: 'Enterprise',
     image: 'https://images.unsplash.com/photo-1555066931-4365d14bab8c?auto=format&fit=crop&q=80&w=2000'
   },
   {
     title: 'AI & Automation',
-    description: 'We optimize business processes with AI and automation for businesses. For more efficiency, less effort, and sustainable growth.',
+    description: 'Reduce ops time by 40% with custom voice agents, chatbots, and intelligent workflow integrations.',
+    tag: 'Founders & Enterprise',
     image: 'https://images.unsplash.com/photo-1677442136019-21780ecad995?auto=format&fit=crop&q=80&w=2000'
   },
   {
     title: 'Strategy & Consulting',
-    description: 'As an agency, we develop strategies and guide businesses from planning to implementation. For sustainable digital success.',
+    description: 'Navigate digital transformation with clear roadmaps. From initial planning to flawless execution.',
+    tag: 'Founders',
     image: 'https://images.unsplash.com/photo-1552664730-d307ca884978?auto=format&fit=crop&q=80&w=2000'
   },
   {
     title: 'Tracking & Analytics',
-    description: 'We use tracking and web analytics to make digital performance measurable and identify potentials. For data-driven decisions and better results.',
+    description: 'Uncover hidden revenue potentials. Make confident, data-driven decisions based on crystal-clear metrics.',
+    tag: 'Growth',
     image: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&q=80&w=2000'
   },
   {
     title: 'Print & Cross-Media',
-    description: 'Analog and digital are not opposites for us, but perfectly complement each other. We take care of print products that perfectly match your corporate identity.',
+    description: 'Bridge the gap between digital and physical. Create stunning print materials that reinforce your brand.',
+    tag: 'Agencies & Brands',
     image: 'https://images.unsplash.com/photo-1562564055-71e051d33c19?auto=format&fit=crop&q=80&w=2000'
   }
 ]
@@ -62,21 +70,20 @@ export default function DigitalistsServices() {
       trigger: containerRef.current,
       pin: true,
       start: 'top top',
-      end: '+=8000', // Pins for 8000px of scroll for a smoother, longer scroll experience
+      end: '+=4000', // Reduced from 8000px to avoid overly long pinning
       snap: {
         snapTo: 1 / (services.length - 1),
-        duration: { min: 0.4, max: 1.0 },
-        delay: 0.1,
+        duration: { min: 0.2, max: 0.5 }, // Faster snap
+        delay: 0.05,
         ease: 'power1.inOut'
       },
       onUpdate: (self) => {
         let newIndex = Math.round(self.progress * (services.length - 1))
         
-        console.log(`ScrollTrigger progress: ${self.progress}, newIndex: ${newIndex}`)
-        
         if (newIndex >= services.length) newIndex = services.length - 1
         if (newIndex < 0) newIndex = 0
-        setActiveIndex(newIndex)
+        
+        setActiveIndex(prev => prev !== newIndex ? newIndex : prev)
       }
     })
 
@@ -87,7 +94,7 @@ export default function DigitalistsServices() {
 
   const handleNavClick = (idx: number) => {
     if (containerRef.current) {
-      const scrollDistance = 8000
+      const scrollDistance = 4000
       const targetScrollY = containerRef.current.offsetTop + (idx / (services.length - 1)) * scrollDistance
       window.scrollTo({ top: targetScrollY, behavior: 'smooth' })
     }
@@ -144,12 +151,12 @@ export default function DigitalistsServices() {
                   y: activeIndex === i ? 0 : 40,
                 }}
                 transition={{ type: "spring", stiffness: 40, damping: 15 }}
-                style={{ zIndex: activeIndex === i ? 5 : 0 }}
+                style={{ zIndex: activeIndex === i ? 5 : 0, willChange: 'transform, opacity' }}
               >
                 <img
                   src={service.image}
                   alt={service.title}
-                  className="w-full h-full object-cover filter contrast-125"
+                  className="w-full h-full object-cover"
                 />
               </motion.div>
             ))}
@@ -170,9 +177,12 @@ export default function DigitalistsServices() {
                     zIndex: isActive ? 10 : 0,
                   }}
                   transition={{ type: "spring", stiffness: 50, damping: 20 }}
-                  className="absolute bottom-0 right-0 w-full bg-white/5 backdrop-blur-xl p-8 lg:p-12 shadow-[0_30px_60px_rgba(0,0,0,0.5)] rounded-xl border border-white/10"
-                  style={{ pointerEvents: isActive ? 'auto' : 'none' }}
+                  className="absolute bottom-0 right-0 w-full bg-white/5 backdrop-blur-md p-8 lg:p-12 shadow-[0_30px_60px_rgba(0,0,0,0.5)] rounded-xl border border-white/10"
+                  style={{ pointerEvents: isActive ? 'auto' : 'none', willChange: 'transform, opacity' }}
                 >
+                  <div className="mb-4 inline-block px-3 py-1 bg-[#ab71f8]/20 text-[#ab71f8] text-[10px] font-bold uppercase tracking-widest rounded-full border border-[#ab71f8]/30">
+                    {service.tag}
+                  </div>
                   <h3 className="text-2xl lg:text-3xl font-black text-white mb-6 tracking-tight">
                     {service.title}
                   </h3>

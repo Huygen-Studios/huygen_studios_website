@@ -277,9 +277,9 @@ export default function GallerySection({ isPlaying, toggleAudio }: GallerySectio
     // Calculate layouts
     const cardTransforms = PROJECTS.map((proj, i) => {
       // 1. Sphere position
-      const y = 1 - (i / (N - 1)) * 2;
+      const y = N > 1 ? 1 - (i / (N - 1)) * 2 : 0;
       const r = Math.sqrt(Math.max(0, 1 - y * y));
-      const theta = GA * i;
+      const theta = GA * i - Math.PI / 2; // Offset by -PI/2 to place the first item on the -Z axis (front-facing)
       const spherePos = new THREE.Vector3(Math.cos(theta) * r, y, Math.sin(theta) * r).multiplyScalar(RADIUS);
 
       const dummy = new THREE.Object3D();
@@ -546,7 +546,11 @@ export default function GallerySection({ isPlaying, toggleAudio }: GallerySectio
       const hits = raycaster.intersectObjects(meshes);
       if (hits.length) {
         const proj = hits[0].object.userData as Project;
-        setDetailProject(proj);
+        if (proj.link) {
+          window.open(proj.link, '_blank');
+        } else {
+          setDetailProject(proj);
+        }
       }
     };
 
