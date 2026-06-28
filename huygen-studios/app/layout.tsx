@@ -180,13 +180,10 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${displayFont.variable} ${bodyFont.variable} antialiased`} suppressHydrationWarning>
       <head>
-<<<<<<< HEAD
-=======
         <meta name="google-adsense-account" content="ca-pub-1790543418739606" />
         {/* Prevent Dark Reader extension from causing hydration errors */}
         <meta name="color-scheme" content="dark" />
         <meta name="darkreader-lock" />
->>>>>>> 81fe3e6 (testimonials,products,footer')
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}

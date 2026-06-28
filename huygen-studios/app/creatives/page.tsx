@@ -1,7 +1,6 @@
 "use client";
 import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
-import LiquidGlass from '@/components/creatives/LiquidGlass'
 import ParticlePathHero from '@/components/creatives/ParticlePathHero'
 import GallerySection from '@/components/creatives/GallerySection'
 import CinematicEnterOverlay from '@/components/creatives/CinematicEnterOverlay'
