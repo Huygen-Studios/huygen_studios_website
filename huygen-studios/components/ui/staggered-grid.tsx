@@ -171,9 +171,9 @@ export function StaggeredGrid({
     const mixedGridItems: (string | 'BENTO_GROUP')[] = Array.from({ length: 21 }, (_, i) => images[i % Math.max(1, images.length)] || '');
 
     // Replace the slot where we want the bento group
-    // Position at index 16 = Row 3 (middle row), spanning columns 3-5 (center)
+    // Position at index 17 = Row 3 (middle row), spanning column 4 (center)
     if (bentoItems && bentoItems.length > 0) {
-        mixedGridItems[16] = 'BENTO_GROUP';
+        mixedGridItems[17] = 'BENTO_GROUP';
     }
 
     return (
@@ -198,7 +198,7 @@ export function StaggeredGrid({
                             if (!bentoItems || bentoItems.length === 0) return null;
 
                             return (
-                                <div key="bento-group" data-col={2} className="grid__item bento-container col-span-3 row-span-1 relative z-20 flex items-center justify-center gap-2 h-full w-full will-change-transform">
+                                <div key="bento-group" data-col={3} className="grid__item bento-container col-span-1 row-span-1 relative z-20 flex items-center justify-center gap-2 h-full w-full will-change-transform">
                                     {bentoItems.map((bentoItem, index) => {
                                         const isActive = activeBento === index;
                                         return (
@@ -220,13 +220,7 @@ export function StaggeredGrid({
                                                     }
                                                 }}
                                             >
-                                                {/* Border Overlay - Fixes edge artifacts by sitting on top */}
-                                                <div className={cn(
-                                                    "absolute inset-0 rounded-2xl border z-50 pointer-events-none transition-colors duration-700",
-                                                    isActive
-                                                        ? "border-zinc-500/50"
-                                                        : "border-zinc-800/50 group-hover:border-zinc-700"
-                                                )} />
+                                                {/* Border Overlay - Removed per user request */}
 
                                                 {/* Content Container */}
                                                 <div className="relative z-10 w-full h-full flex flex-col p-0">
@@ -266,8 +260,8 @@ export function StaggeredGrid({
                         }
 
                         // Skip rendering for the slots that the group takes up
-                        // Group starts at 16, takes 17, 18.
-                        if (bentoItems && bentoItems.length > 0 && (i === 17 || i === 18)) return null;
+                        // (Now taking only 1 slot, so no extra skipping needed)
+                        // if (bentoItems && bentoItems.length > 0 && (i === 17 || i === 18)) return null;
 
                         if (typeof item === 'string') {
                             if (!item) return null;
