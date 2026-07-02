@@ -35,7 +35,7 @@ import { ShineHoverButton } from "@/components/ui/shine-hover";
  * 750-794: Earth close-up with city lights
  */
 const SOURCE_MAX_FRAME = 794;
-const SKIPPED_SOURCE_RANGES = [{ start: 651, end: 730 }] as const;
+const SKIPPED_SOURCE_RANGES = [{ start: 249, end: 329 }, { start: 651, end: 730 }] as const;
 const SKIPPED_FRAME_COUNT = SKIPPED_SOURCE_RANGES.reduce(
   (total, range) => total + range.end - range.start + 1,
   0
@@ -204,24 +204,7 @@ const STORY_BEATS: StoryBeat[] = [
       sourceFrameToProgress(237),
       sourceFrameToProgress(248),
     ],
-  },
-  {
-    eyebrow: "Our production-ready",
-    heading: "WAV System",
-    body: "",
-    position: "three-columns",
-    columns: [
-      { heading: "Web.", body: "Conversion-focused cinematic pages." },
-      { heading: "Automation.", body: "Internal workflows and integrations." },
-      { heading: "Voice.", body: "AI-driven inbound & outbound agents." }
-    ],
-    opacityRange: [
-      sourceFrameToProgress(278),
-      sourceFrameToProgress(302),
-      sourceFrameToProgress(326),
-      sourceFrameToProgress(330),
-    ],
-  },
+  }
 ];
 
 export function HuygenScroll({
