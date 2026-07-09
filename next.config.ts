@@ -8,6 +8,14 @@ const appRoot = dirname(fileURLToPath(import.meta.url));
 const nextConfig: NextConfig = {
   distDir: process.env.NODE_ENV === "development" ? ".next-dev" : ".next",
   transpilePackages: ['three', '@react-three/drei', '@react-three/fiber'],
+  images: {
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "**",
+      },
+    ],
+  },
   turbopack: {
     root: dirname(appRoot),
   },
