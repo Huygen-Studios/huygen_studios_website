@@ -203,11 +203,36 @@ export function Web3Home() {
       ScrollTrigger.refresh();
     }, 200);
 
+    // JavaScript fallback to guarantee .roll-control hover animations work across all browsers
+    const handleMouseOver = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      const rollControl = target.closest(".roll-control");
+      if (rollControl) {
+        rollControl.classList.add("is-hovered");
+      }
+    };
+
+    const handleMouseOut = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      const rollControl = target.closest(".roll-control");
+      if (rollControl) {
+        const related = e.relatedTarget as HTMLElement;
+        if (!related || !rollControl.contains(related)) {
+          rollControl.classList.remove("is-hovered");
+        }
+      }
+    };
+
+    document.addEventListener("mouseover", handleMouseOver);
+    document.addEventListener("mouseout", handleMouseOut);
+
     return () => {
       ctx.revert();
       lenis?.destroy();
       cancelAnimationFrame(frame);
       clearTimeout(timer);
+      document.removeEventListener("mouseover", handleMouseOver);
+      document.removeEventListener("mouseout", handleMouseOut);
     };
   }, []);
 
