@@ -39,3 +39,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# local environment logs
+codex-dev-server*.log
+
+# local agent customizations
+.agents/

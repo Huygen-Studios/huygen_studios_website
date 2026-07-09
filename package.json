@@ -2,13 +2,13 @@
   "name": "huygen-studios-website",
   "private": true,
   "scripts": {
-    "dev": "npm run dev --workspace=huygen-studios",
-    "build": "npm run build --workspace=huygen-studios",
-    "start": "npm run start --workspace=huygen-studios",
-    "lint": "npm run lint --workspace=huygen-studios"
+    "dev": "npm run dev --workspace=huygen-studios-website",
+    "build": "npm run build --workspace=huygen-studios-website",
+    "start": "npm run start --workspace=huygen-studios-website",
+    "lint": "npm run lint --workspace=huygen-studios-website"
   },
   "workspaces": [
-    "huygen-studios"
+    "huygen_studios_wesbite"
   ]
 }
 
