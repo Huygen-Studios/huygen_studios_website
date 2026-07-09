@@ -5,6 +5,7 @@ import DOMPurify from "isomorphic-dompurify";
 import { marked } from "marked";
 import { SecondaryPageLayout } from "@/components/web3/SecondaryPageLayout";
 import { getBlogPosts, getBlogPostBySlug } from "@/lib/blog";
+import { BlogPost } from "@/lib/blog/types";
 
 interface PostPageProps {
   params: Promise<{ slug: string }>;
@@ -19,58 +20,104 @@ export async function generateStaticParams() {
 
 export async function generateMetadata({ params }: PostPageProps): Promise<Metadata> {
   const { slug } = await params;
-  const post = await getBlogPostBySlug(slug);
-  if (!post) return {};
+  try {
+    const post = await getBlogPostBySlug(slug);
+    if (!post) return {};
 
-  return {
-    title: `${post.title} | Huygen Studios Blog`,
-    description: post.description,
-    alternates: { canonical: `/blog/${post.slug}` },
-    openGraph: {
-      title: `${post.title} | Huygen Studios Blog`,
-      description: post.description,
-      url: `https://www.huygenstudios.com/blog/${post.slug}`,
-      type: "article",
-      publishedTime: post.publishedAt,
-      modifiedTime: post.updatedAt,
-      authors: [post.author.name],
-    },
-  };
+    const title = post.title || "Untitled Article";
+    const description = post.description || "";
+    const publishedTime = post.publishedAt || new Date().toISOString();
+    const modifiedTime = post.updatedAt || publishedTime;
+    const authorName = post.author?.name || "Huygen Team";
+
+    // Handle OpenGraph image safely
+    const coverImageUrl = post.coverImage || null;
+    const ogImages = coverImageUrl ? [{ url: coverImageUrl }] : [];
+
+    return {
+      title: `${title} | Huygen Studios Blog`,
+      description,
+      alternates: { canonical: `/blog/${post.slug || slug}` },
+      openGraph: {
+        title: `${title} | Huygen Studios Blog`,
+        description,
+        url: `https://www.huygenstudios.com/blog/${post.slug || slug}`,
+        type: "article",
+        publishedTime,
+        modifiedTime,
+        authors: [authorName],
+        images: ogImages,
+      },
+    };
+  } catch (error) {
+    if (process.env.NODE_ENV === "development") {
+      console.error(`Failed to generate metadata for blog slug ${slug}:`, error);
+    }
+    return {};
+  }
 }
 
 export default async function BlogPostPage({ params }: PostPageProps) {
   const { slug } = await params;
-  const post = await getBlogPostBySlug(slug);
+  
+  let post: BlogPost | null = null;
+  try {
+    post = await getBlogPostBySlug(slug);
+  } catch (error) {
+    console.error(`Error loading blog post page for slug "${slug}":`, error);
+  }
+
   if (!post) {
     notFound();
   }
 
-  // Get all posts to find related ones
-  const allPosts = await getBlogPosts();
-  const relatedPosts = allPosts
-    .filter((p) => p.slug !== slug)
-    .slice(0, 2);
+  // Get all posts to find related ones safely
+  let relatedPosts: BlogPost[] = [];
+  try {
+    const allPosts = await getBlogPosts();
+    relatedPosts = allPosts
+      .filter((p) => p && p.slug && p.slug !== slug)
+      .slice(0, 2);
+  } catch (error) {
+    if (process.env.NODE_ENV === "development") {
+      console.warn("Failed to load related posts:", error);
+    }
+  }
 
-  // Compile and sanitize content HTML server-side
+  // Compile and sanitize content HTML server-side safely
   let rawContentHtml = "";
   if (post.contentHtml) {
     rawContentHtml = post.contentHtml;
   } else if (post.contentMarkdown) {
     rawContentHtml = marked.parse(post.contentMarkdown) as string;
   }
-  const sanitizedContentHtml = DOMPurify.sanitize(rawContentHtml);
+
+  // Clean raw HTML to demote h1 to h2
+  const cleanedHtml = rawContentHtml
+    ? rawContentHtml
+        .replace(/<h1\b([^>]*)>/gi, "<h2$1>")
+        .replace(/<\/h1>/gi, "</h2>")
+    : "";
+
+  const sanitizedContentHtml = DOMPurify.sanitize(cleanedHtml);
 
   // JSON-LD structured data for article indexation
+  const authorName = post.author?.name || "Huygen Team";
+  const title = post.title || "Untitled Article";
+  const description = post.description || "";
+  const publishedAt = post.publishedAt || new Date().toISOString();
+  const updatedAt = post.updatedAt || publishedAt;
+
   const articleJsonLd = {
     "@context": "https://schema.org",
     "@type": "BlogPosting",
-    "headline": post.title,
-    "description": post.description,
-    "datePublished": post.publishedAt,
-    "dateModified": post.updatedAt,
+    "headline": title,
+    "description": description,
+    "datePublished": publishedAt,
+    "dateModified": updatedAt,
     "author": {
       "@type": "Person",
-      "name": post.author.name
+      "name": authorName
     },
     "publisher": {
       "@type": "Organization",
@@ -82,9 +129,29 @@ export default async function BlogPostPage({ params }: PostPageProps) {
     },
     "mainEntityOfPage": {
       "@type": "WebPage",
-      "@id": `https://www.huygenstudios.com/blog/${post.slug}`
+      "@id": `https://www.huygenstudios.com/blog/${post.slug || slug}`
     }
   };
+
+  // Safe date parsing
+  let formattedDate = "";
+  try {
+    if (post.publishedAt) {
+      const d = new Date(post.publishedAt);
+      if (!isNaN(d.getTime())) {
+        formattedDate = d.toLocaleDateString("en-US", { 
+          month: "short", 
+          day: "numeric", 
+          year: "numeric" 
+        });
+      }
+    }
+  } catch {
+    // Ignore invalid date
+  }
+
+  // Safe image url
+  const coverImageUrl = post.coverImage || null;
 
   return (
     <SecondaryPageLayout>
@@ -104,19 +171,42 @@ export default async function BlogPostPage({ params }: PostPageProps) {
 
           <header className="max-w-[900px] mb-12">
             <div className="flex gap-4 items-center text-xs text-[#93969e] font-mono mb-4">
-              <span>{new Date(post.publishedAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</span>
-              <span>•</span>
-              <span>{post.readingTime}</span>
-              <span>•</span>
-              <span>Category: {post.category}</span>
+              {formattedDate && (
+                <>
+                  <span>{formattedDate}</span>
+                  <span>•</span>
+                </>
+              )}
+              {post.readingTime && (
+                <>
+                  <span>{post.readingTime}</span>
+                  <span>•</span>
+                </>
+              )}
+              <span>Category: {post.category || "AI Automation"}</span>
             </div>
             <h1 className="text-3xl md:text-5xl font-bold tracking-tight leading-tight text-white mb-6">
-              {post.title}
+              {title}
             </h1>
-            <p className="text-base md:text-lg text-[#b8bac1] leading-relaxed italic border-l-2 border-[#4a79ff] pl-4">
-              {post.description}
-            </p>
+            {description && (
+              <p className="text-base md:text-lg text-[#b8bac1] leading-relaxed italic border-l-2 border-[#4a79ff] pl-4">
+                {description}
+              </p>
+            )}
           </header>
+
+          {/* Render Cover Image safely if present */}
+          {coverImageUrl && (
+            <div className="max-w-[850px] mb-12 rounded-lg overflow-hidden border border-[rgba(255,255,255,0.1)] aspect-[16/9] relative">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={coverImageUrl}
+                alt={title}
+                className="w-full h-full object-cover"
+                loading="eager"
+              />
+            </div>
+          )}
 
           {/* Article content container with sanitization output */}
           <div 
@@ -131,13 +221,15 @@ export default async function BlogPostPage({ params }: PostPageProps) {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 {relatedPosts.map((related) => (
                   <div key={related.slug} className="border border-[rgba(255,255,255,0.06)] p-6 rounded bg-[#0c0d10] hover:border-[rgba(74,121,255,0.25)] transition-all">
-                    <span className="text-xs font-mono text-[#93969e] block mb-2">{related.category}</span>
+                    <span className="text-xs font-mono text-[#93969e] block mb-2">{related.category || "AI Automation"}</span>
                     <h3 className="text-lg font-bold text-white mb-3 hover:text-[#4a79ff] transition-colors">
-                      <Link href={`/blog/${related.slug}`}>{related.title}</Link>
+                      <Link href={`/blog/${related.slug}`}>{related.title || "Untitled Article"}</Link>
                     </h3>
-                    <p className="text-[#b8bac1] text-xs leading-relaxed mb-4 line-clamp-2">
-                      {related.description}
-                    </p>
+                    {related.description && (
+                      <p className="text-[#b8bac1] text-xs leading-relaxed mb-4 line-clamp-2">
+                        {related.description}
+                      </p>
+                    )}
                     <Link href={`/blog/${related.slug}`} className="text-white text-xs underline hover:text-[#4a79ff] transition-colors">
                       Read More &rarr;
                     </Link>

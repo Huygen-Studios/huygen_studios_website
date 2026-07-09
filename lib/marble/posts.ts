@@ -47,17 +47,36 @@ export async function getMarblePostBySlug(slug: string): Promise<BlogPost | null
 }
 
 function mapMarblePostToBlogPost(post: MarblePost): BlogPost {
-  // Author mapping
-  const primaryAuthor = post.authors && post.authors.length > 0 ? post.authors[0] : null;
+  // Safe Title and Slug
+  const title = post.title || "Untitled Article";
+  const slug = post.slug || "";
+
+  // Author mapping with safety checks
+  const authorsList = Array.isArray(post.authors) ? post.authors : [];
+  const primaryAuthor = authorsList.length > 0 ? authorsList[0] : null;
   const authorName = primaryAuthor?.name || "Huygen Team";
   const authorRole = primaryAuthor?.role || "Developer";
-  const authorAvatar = primaryAuthor?.image || undefined;
+  
+  let authorAvatar: string | undefined = undefined;
+  if (primaryAuthor?.image) {
+    if (typeof primaryAuthor.image === "string") {
+      authorAvatar = primaryAuthor.image;
+    } else if (typeof primaryAuthor.image === "object") {
+      authorAvatar = (primaryAuthor.image as any).url || (primaryAuthor.image as any).src || undefined;
+    }
+  }
 
   // Category mapping
   const categoryName = post.category?.name || "AI Automation";
 
-  // Tags mapping
-  const tagsList = post.tags ? post.tags.map((t: any) => t.name || t) : [];
+  // Tags mapping with safety checks
+  const tagsList = Array.isArray(post.tags) 
+    ? post.tags.map((t: any) => {
+        if (!t) return "";
+        if (typeof t === "string") return t;
+        return t.name || t.slug || "";
+      }).filter(Boolean)
+    : [];
 
   // Content reading time calculation (rough estimate: 200 words per minute)
   const contentBody = post.content || "";
@@ -65,15 +84,49 @@ function mapMarblePostToBlogPost(post: MarblePost): BlogPost {
   const minutes = Math.max(1, Math.round(wordsCount / 200));
   const readingTime = `${minutes} min read`;
 
+  // Safe Dates
+  const publishedAt = post.publishedAt || new Date().toISOString();
+  const updatedAt = post.updatedAt || publishedAt;
+
+  // Safe cover image URL extraction
+  let coverImageUrl: string | undefined = undefined;
+  if (post.coverImage) {
+    if (typeof post.coverImage === "string") {
+      coverImageUrl = post.coverImage;
+    } else if (typeof post.coverImage === "object") {
+      const anyImage = post.coverImage as any;
+      coverImageUrl = anyImage.url || anyImage.src || anyImage.featuredImage?.url || undefined;
+    }
+  }
+  
+  // If not found in coverImage, check other potential locations
+  if (!coverImageUrl && (post as any).image) {
+    const img = (post as any).image;
+    if (typeof img === "string") {
+      coverImageUrl = img;
+    } else if (typeof img === "object") {
+      coverImageUrl = img.url || img.src || undefined;
+    }
+  }
+
+  if (!coverImageUrl && (post as any).featuredImage) {
+    const img = (post as any).featuredImage;
+    if (typeof img === "string") {
+      coverImageUrl = img;
+    } else if (typeof img === "object") {
+      coverImageUrl = img.url || img.src || undefined;
+    }
+  }
+
   return {
-    id: post.id,
-    slug: post.slug,
-    title: post.title,
+    id: post.id || Math.random().toString(36).substring(2, 9),
+    slug,
+    title,
     description: post.description || "",
-    contentHtml: contentBody, // Marble CMS content is typically HTML
-    coverImage: post.coverImage || undefined,
-    publishedAt: post.publishedAt,
-    updatedAt: post.updatedAt,
+    contentHtml: contentBody,
+    coverImage: coverImageUrl,
+    publishedAt,
+    updatedAt,
     author: {
       name: authorName,
       role: authorRole,
@@ -82,6 +135,6 @@ function mapMarblePostToBlogPost(post: MarblePost): BlogPost {
     category: categoryName,
     tags: tagsList,
     readingTime,
-    canonicalUrl: `https://www.huygenstudios.com/blog/${post.slug}`,
+    canonicalUrl: slug ? `https://www.huygenstudios.com/blog/${slug}` : undefined,
   };
 }
