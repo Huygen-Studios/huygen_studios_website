@@ -81,7 +81,7 @@ const faqs = [
   ["Is ongoing support available?", "Yes. Support can cover workflow monitoring, automation maintenance, content production, interface improvements, analytics review, and structured iteration."],
 ];
 
-const nav = [["Capabilities", "#capabilities"], ["Enterprise", "#enterprise"], ["Work", "#work"], ["Process", "#process"], ["Creatives", "/creatives"], ["Contact", "#contact"]];
+const nav = [["Capabilities", "/#capabilities"], ["Enterprise", "/#enterprise"], ["Work", "/#work"], ["Process", "/#process"], ["Creatives", "/creatives"], ["Contact", "/#contact"]];
 
 export function Web3Home() {
   const root = useRef<HTMLElement>(null);
@@ -325,7 +325,32 @@ export function Web3Home() {
           <div className="shell contact-grid"><h2>Discuss the work that needs to move forward.</h2><div><p>Share the operation, interface, campaign, or digital experience you want to improve. We will respond with the questions needed to define a useful next step.</p><a href="mailto:hello@huygenstudios.com" className="button primary roll-control"><TextRoll>hello@huygenstudios.com</TextRoll> <ArrowUpRight size={17} /></a></div></div>
         </section>
 
-        <footer className="footer"><div className="shell footer-grid"><div><Link href="#top" className="brand roll-control"><TextRoll>HUYGEN STUDIOS</TextRoll></Link><p>AI automation, enterprise systems, creative production, motion, UI/UX, and frontend delivery.</p></div><div><strong>Navigate</strong>{nav.map(([label, href]) => <Link className="roll-control" href={href} key={href}><TextRoll>{label}</TextRoll></Link>)}</div><div><strong>Contact</strong><a className="roll-control" href="mailto:hello@huygenstudios.com"><TextRoll>Email the studio</TextRoll></a></div></div><div className="shell footer-base"><span>© 2026 Huygen Studios</span><span>Independent creative and technology studio</span></div></footer>
+        <footer className="footer">
+          <div className="shell footer-grid">
+            <div>
+              <Link href="#top" className="brand roll-control"><TextRoll>HUYGEN STUDIOS</TextRoll></Link>
+              <p>AI automation, enterprise systems, creative production, motion, UI/UX, and frontend delivery.</p>
+            </div>
+            <div>
+              <strong>Navigate</strong>
+              {nav.map(([label, href]) => <Link className="roll-control" href={href} key={href}><TextRoll>{label}</TextRoll></Link>)}
+            </div>
+            <div>
+              <strong>Legal</strong>
+              <Link className="roll-control" href="/privacy-policy"><TextRoll>Privacy Policy</TextRoll></Link>
+              <Link className="roll-control" href="/terms"><TextRoll>Terms of Service</TextRoll></Link>
+              <Link className="roll-control" href="/cookie-policy"><TextRoll>Cookie Policy</TextRoll></Link>
+            </div>
+            <div>
+              <strong>Contact</strong>
+              <a className="roll-control" href="mailto:hello@huygenstudios.com"><TextRoll>Email the studio</TextRoll></a>
+            </div>
+          </div>
+          <div className="shell footer-base">
+            <span>© 2026 Huygen Studios</span>
+            <span>Independent creative and technology studio</span>
+          </div>
+        </footer>
       </div>
     </main>
   );

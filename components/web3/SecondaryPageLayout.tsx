@@ -1,0 +1,118 @@
+"use client";
+
+import { useState, ReactNode } from "react";
+import Link from "next/link";
+import { ArrowUpRight, Menu, X } from "lucide-react";
+import { TextRoll } from "../Button";
+
+interface SecondaryPageLayoutProps {
+  children: ReactNode;
+}
+
+const nav = [
+  ["Capabilities", "/#capabilities"],
+  ["Enterprise", "/#enterprise"],
+  ["Work", "/#work"],
+  ["Process", "/#process"],
+  ["Creatives", "/creatives"],
+  ["Contact", "/#contact"]
+];
+
+export function SecondaryPageLayout({ children }: SecondaryPageLayoutProps) {
+  const [mobileOpen, setMobileOpen] = useState(false);
+
+  return (
+    <main className="studio-root min-h-screen flex flex-col">
+      {/* Header */}
+      <header className="header">
+        <Link href="/" className="brand roll-control">
+          <TextRoll>HUYGEN STUDIOS</TextRoll>
+        </Link>
+        <nav aria-label="Primary navigation">
+          {nav.map(([label, href]) => (
+            <Link className="roll-control" href={href} key={href}>
+              <TextRoll>{label}</TextRoll>
+            </Link>
+          ))}
+        </nav>
+        <Link href="mailto:hello@huygenstudios.com" className="header-cta roll-control">
+          <TextRoll>Start a project</TextRoll> <ArrowUpRight size={15} />
+        </Link>
+        <button
+          className="menu-toggle"
+          aria-label="Open navigation"
+          onClick={() => setMobileOpen(true)}
+        >
+          <Menu />
+        </button>
+      </header>
+
+      {/* Mobile Nav */}
+      <div className={`mobile-nav ${mobileOpen ? "open" : ""}`}>
+        <button aria-label="Close navigation" onClick={() => setMobileOpen(false)}>
+          <X />
+        </button>
+        {nav.map(([label, href]) => (
+          <Link
+            className="roll-control"
+            href={href}
+            key={href}
+            onClick={() => setMobileOpen(false)}
+          >
+            <TextRoll>{label}</TextRoll>
+          </Link>
+        ))}
+        <a className="roll-control" href="mailto:hello@huygenstudios.com">
+          <TextRoll>Start a project</TextRoll>
+        </a>
+      </div>
+
+      {/* Content wrapper */}
+      <div className="flex-grow pt-[120px] pb-[80px]">
+        {children}
+      </div>
+
+      {/* Footer */}
+      <footer className="footer">
+        <div className="shell footer-grid">
+          <div>
+            <Link href="/" className="brand roll-control">
+              <TextRoll>HUYGEN STUDIOS</TextRoll>
+            </Link>
+            <p>AI automation, enterprise systems, creative production, motion, UI/UX, and frontend delivery.</p>
+          </div>
+          <div>
+            <strong>Navigate</strong>
+            {nav.map(([label, href]) => (
+              <Link className="roll-control" href={href} key={href}>
+                <TextRoll>{label}</TextRoll>
+              </Link>
+            ))}
+          </div>
+          <div>
+            <strong>Legal</strong>
+            <Link className="roll-control" href="/privacy-policy">
+              <TextRoll>Privacy Policy</TextRoll>
+            </Link>
+            <Link className="roll-control" href="/terms">
+              <TextRoll>Terms of Service</TextRoll>
+            </Link>
+            <Link className="roll-control" href="/cookie-policy">
+              <TextRoll>Cookie Policy</TextRoll>
+            </Link>
+          </div>
+          <div>
+            <strong>Contact</strong>
+            <a className="roll-control" href="mailto:hello@huygenstudios.com">
+              <TextRoll>Email the studio</TextRoll>
+            </a>
+          </div>
+        </div>
+        <div className="shell footer-base">
+          <span>© 2026 Huygen Studios</span>
+          <span>Independent creative and technology studio</span>
+        </div>
+      </footer>
+    </main>
+  );
+}
