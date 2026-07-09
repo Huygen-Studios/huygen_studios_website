@@ -9,6 +9,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     "",
     "/about",
     "/services",
+    "/services/ai-voice-agents",
+    "/services/whatsapp-automation",
+    "/services/ai-automation",
+    "/services/cinematic-websites",
+    "/services/gohighlevel-automation",
     "/pricing",
     "/blog",
     "/faq",
@@ -29,6 +34,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     } else if (page === "/creatives" || page === "/blog" || page === "/services") {
       priority = 0.9;
       changeFrequency = "weekly";
+    } else if (page.startsWith("/services/")) {
+      priority = 0.85;
+      changeFrequency = "monthly";
     }
 
     return {

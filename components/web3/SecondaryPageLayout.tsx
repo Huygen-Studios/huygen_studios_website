@@ -10,12 +10,12 @@ interface SecondaryPageLayoutProps {
 }
 
 const nav = [
-  ["Capabilities", "/#capabilities"],
-  ["Enterprise", "/#enterprise"],
-  ["Work", "/#work"],
-  ["Process", "/#process"],
-  ["Creatives", "/creatives"],
-  ["Contact", "/#contact"]
+  ["Services", "/services"],
+  ["About", "/about"],
+  ["Pricing", "/pricing"],
+  ["FAQ", "/faq"],
+  ["Blog", "/blog"],
+  ["Contact", "/contact"]
 ];
 
 export function SecondaryPageLayout({ children }: SecondaryPageLayoutProps) {
@@ -23,6 +23,10 @@ export function SecondaryPageLayout({ children }: SecondaryPageLayoutProps) {
 
   return (
     <main className="studio-root min-h-screen flex flex-col">
+      {/* Skip to content — keyboard accessibility */}
+      <a href="#main-content" className="skip-link">
+        Skip to main content
+      </a>
       {/* Header */}
       <header className="header">
         <Link href="/" className="brand roll-control">
@@ -68,7 +72,7 @@ export function SecondaryPageLayout({ children }: SecondaryPageLayoutProps) {
       </div>
 
       {/* Content wrapper */}
-      <div className="flex-grow pt-[120px] pb-[80px]">
+      <div id="main-content" className="flex-grow pt-[120px] pb-[80px]">
         {children}
       </div>
 

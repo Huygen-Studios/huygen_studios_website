@@ -8,3 +8,16 @@
 @media(min-width:768px){.hero-copy{padding:78px 0 62px}.hero h1{font-size:clamp(3.8rem,5.45vw,6.55rem);line-height:.89;max-width:18ch}.hero-index{margin-bottom:24px}.hero-summary{margin-top:25px;max-width:640px}.hero-actions{margin-top:24px}}
 @media(min-width:768px) and (max-height:800px){.hero-copy{padding:52px 0 55px}.hero h1{font-size:clamp(3.5rem,5vw,5.8rem)}.hero-index{margin-bottom:18px}.hero-summary{margin-top:18px;line-height:1.48}.hero-actions{margin-top:18px}.button{min-height:48px}}
 .text-roll{position:relative;display:inline-block;overflow:hidden;vertical-align:middle;color:inherit;line-height:1.15;white-space:nowrap}.text-roll>span{display:block !important;color:inherit;transform:translateY(0) !important;transition:transform .55s cubic-bezier(.76,0,.24,1),opacity .25s ease;will-change:transform}.text-roll::after{content:attr(data-text);position:absolute;left:0;top:0;display:block !important;width:100%;color:inherit;font:inherit;line-height:inherit;white-space:nowrap;transform:translateY(100%) !important;transition:transform .55s cubic-bezier(.76,0,.24,1);will-change:transform}.roll-control:hover .text-roll>span,.roll-control.is-hovered .text-roll>span,.roll-control:focus-visible .text-roll>span{transform:translateY(-100%) !important;opacity:.35 !important}.roll-control:hover .text-roll::after,.roll-control.is-hovered .text-roll::after,.roll-control:focus-visible .text-roll::after{transform:translateY(0) !important}
+/* ─── NO-JS / CRAWLER FALLBACK ───────────────────────────────────────────────
+   layout.tsx injects document.documentElement.classList.add('js-enabled')
+   via a beforeInteractive script. GSAP only hides content when JS is running.
+   Without .js-enabled the hero text remains fully visible so crawlers and
+   no-JS browsers see all content at initial paint.
+──────────────────────────────────────────────────────────────────────────── */
+:not(.js-enabled) .page{clip-path:none !important}
+:not(.js-enabled) .hero-line span{transform:none !important;opacity:1 !important}
+:not(.js-enabled) .hero-summary,:not(.js-enabled) .hero-actions,:not(.js-enabled) .hero-index{opacity:1 !important;transform:none !important}
+:not(.js-enabled) .statement-word{opacity:1 !important}
+/* ─── STUDIO-ROOT FOCUS RING (scoped to override web3.css button resets) ─── */
+.studio-root a:focus-visible,.studio-root button:focus-visible{outline:2px solid #f63a39;outline-offset:2px;border-radius:4px}
+

@@ -251,6 +251,8 @@ export function Web3Home() {
 
   return (
     <main ref={root} className="studio-root">
+      {/* Skip to content — keyboard accessibility */}
+      <a href="#top" className="skip-link">Skip to main content</a>
       <div className="page">
         <header className="header">
           <Link href="#top" className="brand roll-control"><TextRoll>HUYGEN STUDIOS</TextRoll></Link>
@@ -350,7 +352,7 @@ export function Web3Home() {
 
         <section id="process" className="process chapter">
           <div className="shell process-head"><div><h2 className="reveal">A structured delivery process</h2><p>Each phase reduces uncertainty before the next investment is made.</p></div><div className="process-controls"><button aria-label="Previous process step" disabled={activeProcess === 0} onClick={() => moveProcess(-1)}><ArrowLeft /></button><span>{String(activeProcess + 1).padStart(2, "0")} / {String(processSteps.length).padStart(2, "0")}</span><button aria-label="Next process step" disabled={activeProcess === processSteps.length - 1} onClick={() => moveProcess(1)}><ArrowRight /></button></div></div>
-          <div className="process-track" ref={processTrack} onScroll={(event) => { const element = event.currentTarget; setActiveProcess(Math.min(5, Math.round(element.scrollLeft / Math.max(1, element.clientWidth * .68)))); }}>{processSteps.map((item, index) => <article className={activeProcess === index ? "active" : ""} tabIndex={0} key={item[0]}><span>{String(index + 1).padStart(2, "0")}</span><h3>{item[0]}</h3><p>{item[1]}</p></article>)}</div>
+          <div className="process-track" ref={processTrack} onScroll={(event) => { const element = event.currentTarget; setActiveProcess(Math.min(5, Math.round(element.scrollLeft / Math.max(1, element.clientWidth * .68)))); }}>{processSteps.map((item, index) => <article className={activeProcess === index ? "active" : ""} tabIndex={0} aria-label={`Step ${index + 1}: ${item[0]}`} key={item[0]}><span>{String(index + 1).padStart(2, "0")}</span><h3>{item[0]}</h3><p>{item[1]}</p></article>)}</div>
         </section>
 
         <section className="faq chapter">
