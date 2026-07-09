@@ -1,0 +1,216 @@
+@import "tailwindcss";
+
+:root {
+  --primary-bg: #05010a;
+  --text-light: rgba(255, 255, 255, 0.9);
+}
+
+@font-face {
+  font-family: 'FontMain1';
+  src: url('/assets/fontmain1.otf') format('opentype');
+  font-weight: normal;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'FontMain2';
+  src: url('/assets/fontmain2.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body {
+  width: 100%;
+  font-family: 'FontMain2', sans-serif;
+  background-color: var(--primary-bg);
+  color: var(--text-light);
+  overflow-x: hidden;
+}
+
+/* Base Hero Layout */
+.hero {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none; /* Let clicks pass to interactive elements */
+}
+
+/* Layer 0: Background */
+.layer-bg {
+  z-index: 0;
+}
+
+.bg-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  /* Note: .hero-bg-img is used in React, controlled by framer-motion */
+}
+
+/* Navbar */
+.navbar {
+  position: absolute;
+  top: 6vh;
+  left: 0;
+  width: 100%;
+  z-index: 50;
+  padding: 2.5rem 4rem;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  pointer-events: none;
+  /* Framer-motion controls opacity/transform - no CSS animation needed */
+}
+
+.logo,
+.nav-links {
+  pointer-events: auto;
+}
+
+.logo {
+  font-family: 'FontMain2', sans-serif;
+  font-weight: normal;
+  font-size: 1.6rem;
+  letter-spacing: -0.02em;
+  color: #fff;
+  text-transform: uppercase;
+}
+
+.nav-links {
+  display: flex;
+  gap: 3rem;
+}
+
+.nav-links a {
+  color: rgba(255, 255, 255, 0.6);
+  text-decoration: none;
+  font-weight: 500;
+  font-size: 1.05rem;
+  letter-spacing: 0.02em;
+  transition: all 0.3s ease;
+  text-transform: lowercase;
+}
+
+.nav-links a:hover {
+  color: #fff;
+}
+
+/* Layer 10: Huge Text */
+.layer-text {
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.text-container {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 1400px;
+  padding: 0 5vw;
+}
+
+.huge-text-line {
+  font-family: 'FontMain1', sans-serif;
+  font-weight: normal;
+  font-style: normal;
+  font-size: 16vw;
+  letter-spacing: normal;
+  line-height: 0.75;
+  white-space: nowrap;
+  text-transform: none;
+  color: #ffffff;
+  text-shadow: 0 0 40px rgba(255, 255, 255, 0.4);
+  /* Framer-motion controls opacity/transform - no CSS animation needed */
+  will-change: transform;
+}
+
+.line-huygen {
+  align-self: flex-start;
+}
+
+.line-creatives {
+  align-self: flex-end;
+  margin-top: -1.5vw;
+}
+
+/* Layer 20: Subject */
+.layer-subject {
+  z-index: 20;
+  display: flex;
+  align-items: flex-end; /* Pin to bottom */
+  justify-content: center; /* Center */
+  padding-right: 15vw; /* Push subject left */
+}
+
+.subject-img {
+  height: 110vh; /* Large enough to dominate the hero */
+  margin-bottom: -10vh; /* Hide cut edge during parallax */
+  object-fit: contain;
+  object-position: bottom;
+  transform-origin: bottom center;
+  will-change: transform;
+  /* Framer-motion controls opacity/transform - no CSS animation needed */
+}
+
+/* Layer 30: UI (Bottom) */
+.layer-ui {
+  z-index: 30;
+  display: flex;
+  align-items: flex-end;
+  padding: 3rem 4rem;
+  pointer-events: none;
+}
+
+.bottom-content {
+  /* Framer-motion controls opacity/transform - no CSS animation needed */
+}
+
+/* Responsiveness */
+@media (max-width: 1200px) {
+  .huge-text-line { font-size: 18vw; }
+}
+
+@media (max-width: 992px) {
+  .layer-subject {
+      justify-content: center;
+      padding-right: 0;
+  }
+  .subject-img { height: 100vh; margin-bottom: -10vh; }
+  .huge-text-line { font-size: 22vw; }
+  .navbar, .layer-ui { padding: 2rem 3rem; }
+}
+
+@media (max-width: 768px) {
+  .navbar { padding: 1.5rem 2rem; }
+  .nav-links { display: none; }
+  .logo { font-size: 1.2rem; }
+  .layer-ui { padding: 2rem; }
+  .bottom-content {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 2rem;
+  }
+  .subtitle { max-width: 100%; font-size: 1rem; }
+  .text-container { padding: 0; align-items: center; }
+  .line-huygen, .line-creatives { align-self: center; }
+  .huge-text-line { font-size: 26vw; }
+  .subject-img { height: 85vh; margin-bottom: -10vh; }
+}

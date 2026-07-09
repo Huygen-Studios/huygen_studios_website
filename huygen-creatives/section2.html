@@ -1,0 +1,647 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sphere Gallery &mdash; Immersive 3D Experience</title>
+  <meta name="description" content="An immersive spherical gallery experience - explore creative projects in a 3D environment." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
+  <script src="./three.min.js"></script>
+  <script src="./gsap.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #000000;
+      --border: rgba(255,255,255,0.12);
+      --text: #ffffff;
+      --muted: rgba(255,255,255,0.4);
+      --pill-bg: rgba(255,255,255,0.07);
+      --pill-border: rgba(255,255,255,0.16);
+      --sans: 'Inter', Helvetica, Arial, sans-serif;
+      --mono: 'Space Mono', 'Courier New', monospace;
+    }
+    html, body { width:100%; height:100%; overflow:hidden; background:var(--bg); color:var(--text); font-family:var(--sans); -webkit-font-smoothing:antialiased; }
+
+    /* Canvas */
+    #c { position:fixed; inset:0; width:100%; height:100%; cursor:grab; display:block; }
+    #c.grab { cursor:grabbing; }
+
+    /* Loading overlay */
+    #loader {
+      position:fixed; inset:0; z-index:999; background:#000;
+      display:flex; flex-direction:column; align-items:center; justify-content:center; gap:14px;
+    }
+    #loader h1 { font-weight:300; font-size:clamp(28px,5vw,50px); letter-spacing:-0.02em; }
+    #loader p { font-family:var(--mono); font-size:11px; letter-spacing:0.12em; text-transform:uppercase; color:var(--muted); }
+    .lbar-wrap { width:160px; height:1px; background:rgba(255,255,255,0.08); margin-top:12px; overflow:hidden; }
+    .lbar { height:100%; background:#fff; width:0; }
+
+    /* Nav */
+    #nav {
+      position:fixed; top:0; left:0; right:0; z-index:20;
+      display:flex; align-items:center; justify-content:space-between;
+      padding:22px 28px; pointer-events:none;
+    }
+    #nav > * { pointer-events:all; }
+    .logo {
+      display:flex; align-items:center; gap:10px;
+      font-family:var(--mono); font-size:12px; letter-spacing:0.14em; text-transform:uppercase;
+      color:#fff; text-decoration:none; opacity:0.85;
+    }
+    .logo-ring {
+      width:30px; height:30px; border-radius:50%;
+      border:1.5px solid rgba(255,255,255,0.55);
+      display:flex; align-items:center; justify-content:center;
+    }
+    .logo-ring svg { width:14px; height:14px; }
+    .pill {
+      font-family:var(--mono); font-size:11px; letter-spacing:0.1em; text-transform:uppercase;
+      color:#fff; background:var(--pill-bg); border:1px solid var(--pill-border); border-radius:100px;
+      padding:10px 20px; cursor:pointer; text-decoration:none; display:inline-flex; align-items:center; gap:7px;
+      transition:background 0.22s, border-color 0.22s; backdrop-filter:blur(10px);
+    }
+    .pill:hover { background:rgba(255,255,255,0.13); border-color:rgba(255,255,255,0.34); }
+
+    /* Bottom bar */
+    #bottom {
+      position:fixed; bottom:0; left:0; right:0; z-index:20;
+      display:flex; align-items:center; justify-content:space-between;
+      padding:22px 28px; pointer-events:none;
+    }
+    #bottom > * { pointer-events:all; }
+    .bottom-nav {
+      position:absolute; left:50%; transform:translateX(-50%);
+      display:flex; gap:3px; background:rgba(8,8,8,0.72); border:1px solid var(--pill-border);
+      border-radius:100px; padding:5px; backdrop-filter:blur(14px);
+    }
+    .bottom-nav a {
+      font-family:var(--mono); font-size:11px; letter-spacing:0.08em; text-transform:uppercase;
+      color:var(--muted); text-decoration:none; padding:8px 20px; border-radius:100px;
+      transition:color 0.18s, background 0.18s;
+    }
+    .bottom-nav a.on { color:#000; background:#fff; }
+    .bottom-nav a:hover:not(.on) { color:#fff; }
+    .snd {
+      font-family:var(--mono); font-size:10px; letter-spacing:0.1em; text-transform:uppercase;
+      color:var(--muted); background:none; border:none; cursor:pointer; transition:color 0.18s;
+    }
+    .snd:hover { color:#fff; }
+
+    /* Side controls */
+    #side {
+      position:fixed; left:18px; top:50%; transform:translateY(-50%);
+      z-index:20; display:flex; flex-direction:column; gap:8px;
+    }
+    .sv {
+      width:34px; height:34px; border:1px solid var(--pill-border); border-radius:8px;
+      background:var(--pill-bg); display:flex; align-items:center; justify-content:center;
+      cursor:pointer; transition:background 0.18s, border-color 0.18s; backdrop-filter:blur(10px);
+    }
+    .sv:hover, .sv.on { background:rgba(255,255,255,0.14); border-color:rgba(255,255,255,0.38); }
+    .sv svg { width:15px; height:15px; stroke:#fff; fill:none; stroke-width:1.6; }
+
+    /* Tooltip */
+    #tip {
+      position:fixed; pointer-events:none; z-index:30;
+      display:flex; flex-direction:column; gap:3px;
+      opacity:0; transition:opacity 0.18s;
+    }
+    #tip.show { opacity:1; }
+    .tip-title { font-size:13px; font-weight:500; color:#fff; white-space:nowrap; }
+    .tip-sub { font-family:var(--mono); font-size:10px; color:var(--muted); letter-spacing:0.09em; text-transform:uppercase; white-space:nowrap; }
+
+    /* Detail page */
+    #detail {
+      position:fixed; inset:0; z-index:100; background:#000;
+      opacity:0; pointer-events:none; overflow-y:auto;
+    }
+    #detail.open { pointer-events:all; }
+    .d-head {
+      display:flex; align-items:center; justify-content:space-between;
+      padding:26px 28px; border-bottom:1px solid var(--border);
+    }
+    .d-back {
+      display:flex; align-items:center; gap:8px;
+      font-family:var(--mono); font-size:11px; letter-spacing:0.1em; text-transform:uppercase;
+      color:var(--muted); background:none; border:none; cursor:pointer; transition:color 0.18s;
+    }
+    .d-back:hover { color:#fff; }
+    .d-back svg { width:13px; height:13px; stroke:currentColor; fill:none; stroke-width:2; }
+    .d-body { padding:80px 60px; max-width:1080px; margin:0 auto; }
+    .d-tags { display:flex; gap:10px; flex-wrap:wrap; margin-bottom:30px; }
+    .d-tag {
+      font-family:var(--mono); font-size:10px; letter-spacing:0.12em; text-transform:uppercase;
+      color:var(--muted); border:1px solid var(--border); border-radius:100px; padding:5px 12px;
+    }
+    .d-title { font-size:clamp(40px,7vw,90px); font-weight:300; line-height:1.06; letter-spacing:-0.02em; margin-bottom:20px; }
+    .d-client { font-family:var(--mono); font-size:12px; color:var(--muted); letter-spacing:0.1em; text-transform:uppercase; margin-bottom:60px; }
+    .d-img { width:100%; aspect-ratio:16/9; border-radius:12px; overflow:hidden; background:#111; margin-bottom:60px; }
+    .d-img img { width:100%; height:100%; object-fit:cover; display:block; }
+    .d-desc { font-size:18px; line-height:1.78; color:var(--muted); max-width:660px; margin-bottom:80px; }
+  </style>
+</head>
+<body>
+
+<div id="loader">
+  <h1>Sphere Gallery</h1>
+  <p>Loading experience</p>
+  <div class="lbar-wrap"><div class="lbar" id="lbar"></div></div>
+</div>
+
+<canvas id="c"></canvas>
+
+<nav id="nav">
+  <a class="logo" href="#" id="logo-link">
+    <div class="logo-ring">
+      <svg viewBox="0 0 14 14" fill="none">
+        <circle cx="7" cy="7" r="5.5" stroke="#fff" stroke-width="1.1"/>
+        <ellipse cx="7" cy="7" rx="2.5" ry="5.5" stroke="#fff" stroke-width="1.1"/>
+        <line x1="1.5" y1="7" x2="12.5" y2="7" stroke="#fff" stroke-width="1.1"/>
+      </svg>
+    </div>
+    Sphere
+  </a>
+  <div style="display:flex;gap:10px;">
+    <button class="pill" id="filter-btn">
+      <svg width="11" height="11" viewBox="0 0 11 11" fill="none"><path d="M1 2.5h9M2.5 5.5h6M4.5 8.5h2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+      Filter
+    </button>
+    <a class="pill" href="#" id="talk-btn">Let&#8217;s Talk &rarr;</a>
+  </div>
+</nav>
+
+<div id="side">
+  <button class="sv on" id="sv-sphere" title="Sphere view">
+    <svg viewBox="0 0 15 15"><circle cx="7.5" cy="7.5" r="5.5"/><ellipse cx="7.5" cy="7.5" rx="2.5" ry="5.5"/><line x1="2" y1="7.5" x2="13" y2="7.5"/></svg>
+  </button>
+  <button class="sv" id="sv-grid" title="Grid view">
+    <svg viewBox="0 0 15 15"><rect x="2" y="2" width="4.5" height="4.5" rx="1"/><rect x="8.5" y="2" width="4.5" height="4.5" rx="1"/><rect x="2" y="8.5" width="4.5" height="4.5" rx="1"/><rect x="8.5" y="8.5" width="4.5" height="4.5" rx="1"/></svg>
+  </button>
+</div>
+
+<div id="tip">
+  <span class="tip-title" id="tip-t"></span>
+  <span class="tip-sub" id="tip-s"></span>
+</div>
+
+<div id="bottom">
+  <button class="snd" id="snd-btn">Sound [OFF]</button>
+  <nav class="bottom-nav">
+    <a href="#" class="on" id="bn-work">Work</a>
+    <a href="#" id="bn-about">About</a>
+    <a href="#" id="bn-careers">Careers</a>
+  </nav>
+  <div></div>
+</div>
+
+<div id="detail" role="dialog" aria-modal="true" aria-label="Project detail">
+  <div class="d-head">
+    <button class="d-back" id="d-back">
+      <svg viewBox="0 0 13 13"><polyline points="8.5,2 3.5,6.5 8.5,11"/></svg>
+      Back to Gallery
+    </button>
+    <a class="pill" href="#">Let&#8217;s Talk &rarr;</a>
+  </div>
+  <div class="d-body">
+    <div class="d-tags" id="d-tags"></div>
+    <h2 class="d-title" id="d-title">Project</h2>
+    <p class="d-client" id="d-client">Client</p>
+    <div class="d-img"><img id="d-img" src="" alt="" /></div>
+    <p class="d-desc" id="d-desc">Description.</p>
+  </div>
+</div>
+
+<script>
+(function() {
+  // ── Data ────────────────────────────────────────────────────────────────
+  var PROJECTS = [
+    { id:'p1',  title:'AI Compass',         client:'Google',       year:'2024', tags:['3D','MOTION','WEBSITE'],    color:'#b86a28', desc:'A cutting-edge digital experience for the AI Compass project, navigating the future of artificial intelligence with immersive 3D storytelling and bold visual design.' },
+    { id:'p2',  title:'Free Spirits',       client:'Netflix',      year:'2024', tags:['EXPERIENCE','BRAND'],       color:'#6b1010', desc:'An ethereal brand experience blending cinematic visuals with interactive digital art, created for a landmark Netflix campaign.' },
+    { id:'p3',  title:'Visitor Guide',      client:'Google',       year:'2025', tags:['3D','WEBSITE','EVENT'],     color:'#1e3d7a', desc:'A transformative visitor experience guide that reimagines how people discover and navigate a creative campus through digital-first design.' },
+    { id:'p4',  title:'Pixel 9 Pro',        client:'Google',       year:'2024', tags:['PRODUCT','3D','CAMPAIGN'],  color:'#d0d0d0', desc:'A photorealistic 3D product showcase for the Google Pixel 9 Pro, featuring smooth interactive storytelling and premium visual language.' },
+    { id:'p5',  title:'Petra',              client:'Google',       year:'2024', tags:['MUSIC','MOTION','BRAND'],   color:'#2a0808', desc:'A bold visual identity blending cultural heritage with modern digital aesthetics for an award-winning brand experience.' },
+    { id:'p6',  title:'Blue Spirits',       client:'DIAGEO',       year:'2025', tags:['PRODUCT','3D','BRAND'],     color:'#0e2a38', desc:'An immersive digital campaign featuring liquid simulations and cinematic storytelling for a premium spirits range.' },
+    { id:'p7',  title:'Alocasia',           client:'DIAGEO',       year:'2024', tags:['MOTION','BRAND','CAMPAIGN'],color:'#152508', desc:'A nature-inspired campaign blending organic motion with premium brand aesthetics for a botanical spirits collection.' },
+    { id:'p8',  title:'Judas Priest',       client:'Live Nation',  year:'2024', tags:['MUSIC','EXPERIENCE','3D'],  color:'#160018', desc:'A legendary tribute digital experience celebrating 50 years of heavy metal with immersive visual storytelling and dynamic 3D.' },
+    { id:'p9',  title:'New Way to Cloud',   client:'Google Cloud',  year:'2025', tags:['BRAND','MOTION','CAMPAIGN'],color:'#051222', desc:'The New Way to Cloud campaign reimagined with bold typography and kinetic motion design for a global audience.' },
+    { id:'p10', title:'The Ambos',          client:'DIAGEO',       year:'2025', tags:['PRODUCT','BRAND','3D'],     color:'#221408', desc:'A premium digital experience featuring immersive product visualization for a distinguished spirits range.' },
+    { id:'p11', title:'SOUND:AI',           client:'Phantom',      year:'2025', tags:['AUDIO','AI','EXPERIENCE'],  color:'#2a0030', desc:'An experimental audio-visual installation powered by AI, creating unique soundscapes responding to user behavior in real time.' },
+    { id:'p12', title:'Stellar Maps',       client:'ESA',          year:'2024', tags:['3D','DATA','SCIENCE'],      color:'#00051a', desc:'An interactive star map visualization letting users explore millions of celestial objects across the observable universe.' },
+    { id:'p13', title:'Motion Type',        client:'Pentagram',    year:'2025', tags:['TYPE','MOTION','BRAND'],    color:'#080808', desc:'A typographic motion study exploring the relationship between letterforms, time, and digital space.' },
+    { id:'p14', title:'Synthetic Nature',   client:'Adidas',       year:'2025', tags:['PRODUCT','3D','SUSTAIN'],   color:'#082008', desc:'A sustainable materials campaign blending organic aesthetics with cutting-edge 3D craft for a new collection.' },
+    { id:'p15', title:'Neural Canvas',      client:'Adobe',        year:'2024', tags:['AI','CREATIVE','TOOLS'],    color:'#200808', desc:'A creative AI toolset showcase demonstrating the future of AI-assisted creative work with beautiful interactive demos.' },
+    { id:'p16', title:'Depth Charge',       client:'Red Bull',     year:'2025', tags:['EXPERIENCE','SPORT','3D'],  color:'#130800', desc:'An extreme sports digital experience plunging viewers into the depths of underwater action and high-performance culture.' },
+    { id:'p17', title:'Chromatic Dream',    client:'Spotify',      year:'2024', tags:['MUSIC','VISUAL','BRAND'],   color:'#001800', desc:'A visual music experience translating audio frequencies into a mesmerizing chromatic journey through sound and light.' },
+    { id:'p18', title:'Phantom World',      client:'Internal',     year:'2025', tags:['IDENTITY','BRAND','WEB'],   color:'#0d0d0d', desc:'A self-initiated exploration of identity, space, and the boundaries of digital experience design.' },
+  ];
+
+  // ── Canvas texture generation ────────────────────────────────────────────
+  function hexToRgb(hex) {
+    var r = parseInt(hex.slice(1,3),16)||0;
+    var g = parseInt(hex.slice(3,5),16)||0;
+    var b = parseInt(hex.slice(5,7),16)||0;
+    return [r,g,b];
+  }
+  function darken(hex, f) {
+    var rgb = hexToRgb(hex);
+    return 'rgb('+Math.round(rgb[0]*(1-f))+','+Math.round(rgb[1]*(1-f))+','+Math.round(rgb[2]*(1-f))+')';
+  }
+  function lighten(hex, f) {
+    var rgb = hexToRgb(hex);
+    return 'rgb('+Math.min(255,Math.round(rgb[0]+(255-rgb[0])*f))+','+Math.min(255,Math.round(rgb[1]+(255-rgb[1])*f))+','+Math.min(255,Math.round(rgb[2]+(255-rgb[2])*f))+')';
+  }
+  function rrect(ctx, x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x+r,y); ctx.lineTo(x+w-r,y);
+    ctx.quadraticCurveTo(x+w,y,x+w,y+r);
+    ctx.lineTo(x+w,y+h-r);
+    ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);
+    ctx.lineTo(x+r,y+h);
+    ctx.quadraticCurveTo(x,y+h,x,y+h-r);
+    ctx.lineTo(x,y+r);
+    ctx.quadraticCurveTo(x,y,x+r,y);
+    ctx.closePath();
+  }
+
+  function makeTexture(proj) {
+    var W=800, H=560;
+    var cv = document.createElement('canvas');
+    cv.width=W; cv.height=H;
+    var ctx = cv.getContext('2d');
+    var c = proj.color||'#111';
+
+    // bg gradient
+    var g = ctx.createLinearGradient(0,0,W,H);
+    g.addColorStop(0, darken(c,0.25));
+    g.addColorStop(0.55, c);
+    g.addColorStop(1, darken(c,0.55));
+    ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
+
+    // subtle film grain
+    for(var i=0;i<4000;i++){
+      ctx.fillStyle='rgba(255,255,255,'+( Math.random()*0.035)+')';
+      ctx.fillRect(Math.random()*W, Math.random()*H, 1, 1);
+    }
+
+    // center glow
+    ctx.save();
+    var rg = ctx.createRadialGradient(W*0.5,H*0.46,0,W*0.5,H*0.46,H*0.52);
+    rg.addColorStop(0,'rgba(255,255,255,0.18)');
+    rg.addColorStop(1,'rgba(0,0,0,0)');
+    ctx.fillStyle=rg; ctx.fillRect(0,0,W,H);
+    ctx.restore();
+
+    // top separator line
+    ctx.save();
+    ctx.globalAlpha=0.12; ctx.strokeStyle='#fff'; ctx.lineWidth=0.7;
+    ctx.beginPath(); ctx.moveTo(0,42); ctx.lineTo(W,42); ctx.stroke();
+    ctx.restore();
+
+    // year (top-left)
+    ctx.save();
+    ctx.font='400 10px "Space Mono",monospace';
+    ctx.fillStyle='rgba(255,255,255,0.45)';
+    ctx.fillText(proj.year, 18, 28);
+    ctx.restore();
+
+    // client (top-right)
+    ctx.save();
+    ctx.font='400 10px "Space Mono",monospace';
+    ctx.fillStyle='rgba(255,255,255,0.45)';
+    ctx.textAlign='right';
+    ctx.fillText(proj.client.toUpperCase(), W-18, 28);
+    ctx.restore();
+
+    // title
+    var fs = Math.max(24, Math.min(46, Math.round(700/Math.max(proj.title.length,5))));
+    ctx.save();
+    ctx.font='300 '+fs+'px "Inter",Helvetica,sans-serif';
+    ctx.fillStyle='rgba(255,255,255,0.92)';
+    ctx.textAlign='center';
+    ctx.textBaseline='middle';
+    ctx.fillText(proj.title, W/2, H/2);
+    ctx.restore();
+
+    // tags
+    var tx=18;
+    proj.tags.forEach(function(tag){
+      ctx.save();
+      ctx.font='400 8px "Space Mono",monospace';
+      var tw=ctx.measureText(tag).width+20;
+      rrect(ctx,tx,H-36,tw,18,9);
+      ctx.fillStyle='rgba(255,255,255,0.1)'; ctx.fill();
+      ctx.strokeStyle='rgba(255,255,255,0.22)'; ctx.lineWidth=0.7; ctx.stroke();
+      ctx.fillStyle='rgba(255,255,255,0.65)';
+      ctx.textBaseline='middle';
+      ctx.fillText(tag, tx+10, H-27);
+      ctx.restore();
+      tx+=tw+7;
+    });
+
+    return new THREE.CanvasTexture(cv);
+  }
+
+  // ── Three.js scene ──────────────────────────────────────────────────────
+  var canvas = document.getElementById('c');
+  var renderer = new THREE.WebGLRenderer({ canvas:canvas, antialias:true });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
+  renderer.setSize(window.innerWidth, window.innerHeight);
+
+  var scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x000000);
+  scene.fog = new THREE.FogExp2(0x000000, 0.032);
+
+  var camera = new THREE.PerspectiveCamera(72, window.innerWidth/window.innerHeight, 0.05, 200);
+  camera.position.set(0,0,0.001);
+
+  // Card group
+  var RADIUS = 11.5;
+  var CW = 3.0, CH = 2.1;
+  var cardGroup = new THREE.Group();
+  scene.add(cardGroup);
+
+  var meshes = [];
+  var N = PROJECTS.length;
+  var GA = Math.PI*(3-Math.sqrt(5)); // golden angle
+
+  PROJECTS.forEach(function(proj, i){
+    var y = 1 - (i/(N-1))*2;
+    var r = Math.sqrt(Math.max(0, 1-y*y));
+    var theta = GA*i;
+    var pos = new THREE.Vector3(Math.cos(theta)*r, y, Math.sin(theta)*r).multiplyScalar(RADIUS);
+
+    var geo = new THREE.PlaneGeometry(CW, CH);
+    var tex = makeTexture(proj);
+    var mat = new THREE.MeshBasicMaterial({ map:tex, transparent:true, opacity:0, side:THREE.FrontSide });
+    var mesh = new THREE.Mesh(geo, mat);
+    mesh.position.copy(pos);
+    mesh.lookAt(new THREE.Vector3(0,0,0));
+    mesh.rotateZ((Math.random()-0.5)*0.07);
+    mesh.userData = proj;
+    cardGroup.add(mesh);
+    meshes.push(mesh);
+  });
+
+  // Stars
+  (function(){
+    var n=700, pos=new Float32Array(n*3);
+    for(var i=0;i<n;i++){
+      var t=Math.random()*Math.PI*2;
+      var p=Math.acos(2*Math.random()-1);
+      var rr=28+Math.random()*35;
+      pos[i*3]=rr*Math.sin(p)*Math.cos(t);
+      pos[i*3+1]=rr*Math.sin(p)*Math.sin(t);
+      pos[i*3+2]=rr*Math.cos(p);
+    }
+    var sg=new THREE.BufferGeometry();
+    sg.setAttribute('position',new THREE.BufferAttribute(pos,3));
+    scene.add(new THREE.Points(sg, new THREE.PointsMaterial({color:0xffffff,size:0.055,transparent:true,opacity:0.45})));
+  })();
+
+  // ── Interaction ──────────────────────────────────────────────────────────
+  var isDrag=false, dragX=0, dragY=0;
+  var velX=0, velY=0;
+  var tgtX=0, tgtY=0;
+  var curX=0, curY=0;
+  var autoRot=true;
+  var detailOpen=false;
+  var SENS=0.0028, FRIC=0.91, LERP=0.07;
+
+  canvas.addEventListener('mousedown',function(e){
+    if(detailOpen)return;
+    isDrag=true; dragX=e.clientX; dragY=e.clientY;
+    velX=0; velY=0; autoRot=false;
+    canvas.classList.add('grab');
+  });
+  window.addEventListener('mousemove',function(e){
+    if(isDrag){
+      var dx=e.clientX-dragX, dy=e.clientY-dragY;
+      velX=dy*SENS; velY=dx*SENS;
+      tgtX+=velX; tgtY+=velY;
+      tgtX=Math.max(-1.15,Math.min(1.15,tgtX));
+      dragX=e.clientX; dragY=e.clientY;
+    } else {
+      doHover(e);
+    }
+  });
+  window.addEventListener('mouseup',function(){
+    if(!isDrag)return;
+    isDrag=false; canvas.classList.remove('grab');
+    clearTimeout(window._arat);
+    window._arat=setTimeout(function(){ if(!detailOpen)autoRot=true; },4200);
+  });
+  canvas.addEventListener('wheel',function(e){
+    e.preventDefault();
+    tgtY+=e.deltaX*0.0018; tgtX+=e.deltaY*0.0018;
+    tgtX=Math.max(-1.15,Math.min(1.15,tgtX));
+    autoRot=false;
+    clearTimeout(window._wrt);
+    window._wrt=setTimeout(function(){if(!detailOpen)autoRot=true;},3200);
+  },{passive:false});
+
+  // Touch
+  canvas.addEventListener('touchstart',function(e){
+    if(detailOpen)return;
+    isDrag=true; dragX=e.touches[0].clientX; dragY=e.touches[0].clientY;
+    velX=0; velY=0; autoRot=false;
+  },{passive:true});
+  canvas.addEventListener('touchmove',function(e){
+    if(!isDrag)return;
+    var dx=e.touches[0].clientX-dragX, dy=e.touches[0].clientY-dragY;
+    velX=dy*SENS; velY=dx*SENS;
+    tgtX+=velX; tgtY+=velY;
+    tgtX=Math.max(-1.15,Math.min(1.15,tgtX));
+    dragX=e.touches[0].clientX; dragY=e.touches[0].clientY;
+  },{passive:true});
+  canvas.addEventListener('touchend',function(){
+    isDrag=false;
+    clearTimeout(window._arat);
+    window._arat=setTimeout(function(){if(!detailOpen)autoRot=true;},4200);
+  });
+
+  // Hover
+  var raycaster=new THREE.Raycaster();
+  var mouse=new THREE.Vector2();
+  var hovMesh=null;
+  var tip=document.getElementById('tip');
+  var tipT=document.getElementById('tip-t');
+  var tipS=document.getElementById('tip-s');
+
+  function doHover(e){
+    mouse.x=(e.clientX/window.innerWidth)*2-1;
+    mouse.y=-(e.clientY/window.innerHeight)*2+1;
+    raycaster.setFromCamera(mouse,camera);
+    var hits=raycaster.intersectObjects(meshes);
+    if(hits.length){
+      var m=hits[0].object;
+      if(m!==hovMesh){
+        if(hovMesh){ gsap.to(hovMesh.scale,{x:1,y:1,z:1,duration:0.3,ease:'power2.out'}); }
+        hovMesh=m;
+        gsap.to(hovMesh.scale,{x:1.06,y:1.06,z:1.06,duration:0.32,ease:'power2.out'});
+      }
+      var p=m.userData;
+      tipT.textContent=p.title;
+      tipS.textContent=p.client+' \u2014 '+p.year;
+      tip.style.left=(e.clientX+16)+'px';
+      tip.style.top=(e.clientY-36)+'px';
+      tip.classList.add('show');
+      canvas.style.cursor='pointer';
+    } else {
+      if(hovMesh){ gsap.to(hovMesh.scale,{x:1,y:1,z:1,duration:0.28,ease:'power2.out'}); hovMesh=null; }
+      tip.classList.remove('show');
+      canvas.style.cursor=isDrag?'grabbing':'grab';
+    }
+  }
+
+  // Click to open detail
+  var lastClick=0;
+  canvas.addEventListener('click',function(e){
+    if(detailOpen)return;
+    var now=Date.now();
+    if(now-lastClick<300){lastClick=now;return;} // ignore double-click drift
+    lastClick=now;
+    mouse.x=(e.clientX/window.innerWidth)*2-1;
+    mouse.y=-(e.clientY/window.innerHeight)*2+1;
+    raycaster.setFromCamera(mouse,camera);
+    var hits=raycaster.intersectObjects(meshes);
+    if(hits.length) openDetail(hits[0].object.userData);
+  });
+
+  // ── Detail page ───────────────────────────────────────────────────────────
+  var detailEl=document.getElementById('detail');
+  document.getElementById('d-back').addEventListener('click', closeDetail);
+  window.addEventListener('keydown',function(e){ if(e.key==='Escape'&&detailOpen) closeDetail(); });
+
+  function openDetail(proj){
+    detailOpen=true;
+    document.getElementById('d-title').textContent=proj.title;
+    document.getElementById('d-client').textContent=proj.client+' \u2014 '+proj.year;
+    document.getElementById('d-desc').textContent=proj.desc;
+
+    var tagsEl=document.getElementById('d-tags');
+    tagsEl.innerHTML='';
+    proj.tags.forEach(function(t){
+      var s=document.createElement('span');
+      s.className='d-tag'; s.textContent=t;
+      tagsEl.appendChild(s);
+    });
+
+    // Build hero image
+    var dc=document.createElement('canvas');
+    dc.width=1200; dc.height=675;
+    var dx=dc.getContext('2d');
+    var gg=dx.createLinearGradient(0,0,1200,675);
+    gg.addColorStop(0,darken(proj.color||'#111',0.15));
+    gg.addColorStop(1,proj.color||'#111');
+    dx.fillStyle=gg; dx.fillRect(0,0,1200,675);
+    var rg2=dx.createRadialGradient(600,338,0,600,338,480);
+    rg2.addColorStop(0,'rgba(255,255,255,0.2)');
+    rg2.addColorStop(1,'rgba(0,0,0,0)');
+    dx.fillStyle=rg2; dx.fillRect(0,0,1200,675);
+    var fs2=Math.max(60,Math.min(88,Math.round(1050/Math.max(proj.title.length,5))));
+    dx.font='300 '+fs2+'px "Inter",Helvetica,sans-serif';
+    dx.fillStyle='rgba(255,255,255,0.82)';
+    dx.textAlign='center'; dx.textBaseline='middle';
+    dx.fillText(proj.title, 600, 338);
+    document.getElementById('d-img').src=dc.toDataURL();
+    document.getElementById('d-img').alt=proj.title;
+
+    detailEl.classList.add('open');
+    gsap.fromTo(detailEl,{opacity:0},{opacity:1,duration:0.55,ease:'power2.inOut'});
+    gsap.fromTo('.d-body > *',{opacity:0,y:28},{opacity:1,y:0,duration:0.65,stagger:0.07,ease:'power3.out',delay:0.18});
+  }
+
+  function closeDetail(){
+    gsap.to(detailEl,{opacity:0,duration:0.38,ease:'power2.in',onComplete:function(){
+      detailEl.classList.remove('open');
+      detailOpen=false;
+      clearTimeout(window._arat);
+      window._arat=setTimeout(function(){autoRot=true;},1200);
+    }});
+  }
+
+  // ── Animation loop ──────────────────────────────────────────────────────
+  var euler=new THREE.Euler(0,0,0,'YXZ');
+  var quat=new THREE.Quaternion();
+  var AUTO_SPEED=0.00022;
+
+  function tick(){
+    requestAnimationFrame(tick);
+    if(!isDrag){
+      velX*=FRIC; velY*=FRIC;
+      tgtX+=velX; tgtY+=velY;
+      tgtX=Math.max(-1.15,Math.min(1.15,tgtX));
+      if(autoRot) tgtY+=AUTO_SPEED;
+    }
+    curX+=(tgtX-curX)*LERP;
+    curY+=(tgtY-curY)*LERP;
+    euler.set(curX,curY,0,'YXZ');
+    quat.setFromEuler(euler);
+    cardGroup.quaternion.copy(quat);
+    renderer.render(scene,camera);
+  }
+
+  // ── Loading sequence ────────────────────────────────────────────────────
+  var lbar=document.getElementById('lbar');
+  var loader=document.getElementById('loader');
+  var prog=0;
+  var iv=setInterval(function(){
+    prog+=Math.random()*20+5;
+    lbar.style.width=Math.min(prog,92)+'%';
+    if(prog>=92)clearInterval(iv);
+  },100);
+
+  tick(); // start render immediately
+
+  setTimeout(function(){
+    lbar.style.width='100%';
+    setTimeout(function(){
+      gsap.to(loader,{opacity:0,duration:0.7,ease:'power2.inOut',onComplete:function(){
+        loader.style.display='none';
+      }});
+      // Stagger cards in
+      meshes.forEach(function(m,i){
+        m.scale.set(0.6,0.6,0.6);
+        gsap.to(m.material,{opacity:1,duration:0.9,delay:0.5+i*0.045,ease:'power2.out'});
+        gsap.to(m.scale,{x:1,y:1,z:1,duration:1.0,delay:0.5+i*0.045,ease:'back.out(1.5)'});
+      });
+    },200);
+  },1600);
+
+  // ── Resize ───────────────────────────────────────────────────────────────
+  window.addEventListener('resize',function(){
+    camera.aspect=window.innerWidth/window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth,window.innerHeight);
+  });
+
+  // ── UI button wiring ─────────────────────────────────────────────────────
+  document.querySelectorAll('.bottom-nav a').forEach(function(a){
+    a.addEventListener('click',function(e){
+      e.preventDefault();
+      document.querySelectorAll('.bottom-nav a').forEach(function(x){x.classList.remove('on');});
+      a.classList.add('on');
+    });
+  });
+
+  var sndOn=false;
+  document.getElementById('snd-btn').addEventListener('click',function(){
+    sndOn=!sndOn;
+    this.textContent='Sound ['+(sndOn?'ON':'OFF')+']';
+  });
+
+  document.getElementById('sv-sphere').addEventListener('click',function(){
+    this.classList.add('on');
+    document.getElementById('sv-grid').classList.remove('on');
+  });
+  document.getElementById('sv-grid').addEventListener('click',function(){
+    this.classList.add('on');
+    document.getElementById('sv-sphere').classList.remove('on');
+  });
+
+})();
+</script>
+</body>
+</html>
