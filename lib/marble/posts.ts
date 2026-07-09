@@ -11,7 +11,13 @@ export async function getMarblePosts(): Promise<BlogPost[]> {
 
     // Handle standard "posts" key or "data" array in response
     const posts: MarblePost[] = res.posts || res.data || [];
-    return posts.map(mapMarblePostToBlogPost);
+    
+    // Filter to only include published, valid posts with a slug
+    const publishedPosts = posts.filter(
+      (post) => post && post.status?.toLowerCase() === "published" && post.slug
+    );
+    
+    return publishedPosts.map(mapMarblePostToBlogPost);
   } catch (err) {
     console.error("Error fetching posts from Marble CMS:", err);
     throw err;
@@ -25,7 +31,7 @@ export async function getMarblePostBySlug(slug: string): Promise<BlogPost | null
     });
 
     const post: MarblePost | null = res.post || res.data || null;
-    if (post) {
+    if (post && post.status?.toLowerCase() === "published") {
       return mapMarblePostToBlogPost(post);
     }
     return null;
