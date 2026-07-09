@@ -108,9 +108,9 @@ export function Web3Home() {
 
     const ctx = gsap.context(() => {
       gsap.timeline()
-        .from(".page", { clipPath: "inset(100% 0 0)", duration: reduce ? 0 : .8, ease: "power4.inOut" })
-        .from(".hero-line span", { yPercent: 110, duration: reduce ? 0 : .9, stagger: .08, ease: "power4.out" }, .12)
-        .from(".hero-summary, .hero-actions, .hero-index", { opacity: 0, y: 22, duration: reduce ? 0 : .55, stagger: .08 }, .46);
+        .fromTo(".page", { clipPath: "inset(100% 0 0)" }, { clipPath: "inset(0% 0 0)", duration: reduce ? 0 : .8, ease: "power4.inOut" })
+        .fromTo(".hero-line span", { yPercent: 110 }, { yPercent: 0, duration: reduce ? 0 : .9, stagger: .08, ease: "power4.out" }, .12)
+        .fromTo(".hero-summary, .hero-actions, .hero-index", { opacity: 0, y: 22 }, { opacity: 1, y: 0, duration: reduce ? 0 : .55, stagger: .08 }, .46);
 
       if (!reduce) {
         gsap.to(".hero-copy", {
@@ -126,22 +126,28 @@ export function Web3Home() {
           scrollTrigger: { trigger: ".statement-copy", start: "top 76%", end: "bottom 38%", scrub: 1 },
         });
         gsap.utils.toArray<HTMLElement>(".reveal").forEach((element) => {
-          gsap.from(element, {
-            opacity: 0,
-            y: 44,
-            duration: .8,
-            ease: "power3.out",
-            scrollTrigger: { trigger: element, start: "top 82%", once: true },
-          });
+          gsap.fromTo(element,
+            { opacity: 0, y: 44 },
+            {
+              opacity: 1,
+              y: 0,
+              duration: .8,
+              ease: "power3.out",
+              scrollTrigger: { trigger: element, start: "top 82%", once: true },
+            }
+          );
         });
         gsap.utils.toArray<HTMLElement>(".cap-card").forEach((card, index) => {
-          gsap.from(card, {
-            y: 70 + index * 8,
-            opacity: 0,
-            duration: .9,
-            ease: "power3.out",
-            scrollTrigger: { trigger: card, start: "top 84%", once: true },
-          });
+          gsap.fromTo(card,
+            { y: 70 + index * 8, opacity: 0 },
+            {
+              y: 0,
+              opacity: 1,
+              duration: .9,
+              ease: "power3.out",
+              scrollTrigger: { trigger: card, start: "top 84%", once: true },
+            }
+          );
         });
         if (!mobile) {
           const cards = gsap.utils.toArray<HTMLElement>(".work-panel");
@@ -164,10 +170,16 @@ export function Web3Home() {
       }
     }, root);
 
+    // Call ScrollTrigger.refresh after initial layout settles (e.g. fonts and 3D shapes load)
+    const timer = setTimeout(() => {
+      ScrollTrigger.refresh();
+    }, 200);
+
     return () => {
       ctx.revert();
       lenis?.destroy();
       cancelAnimationFrame(frame);
+      clearTimeout(timer);
     };
   }, []);
 
