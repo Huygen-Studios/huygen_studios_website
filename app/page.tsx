@@ -2,16 +2,59 @@ import type { Metadata } from "next";
 import { Web3Home } from "@/components/web3/Web3Home";
 
 export const metadata: Metadata = {
-  title: "AI Automation, Creative Production & Digital Delivery",
-  description: "Huygen Studios combines AI automation, enterprise workflows, creative production, motion, UI/UX, and frontend delivery.",
+  title: "Huygen Studios | AI Automation, Creative Production & Digital Delivery",
+  description: "Huygen Studios combines enterprise AI automation, WhatsApp workflows, custom voice agents, brand design, and premium Next.js WebGL systems in one studio practice.",
   alternates: { canonical: "/" },
   openGraph: {
-    title: "Huygen Studios | Creative and Technology Studio",
-    description: "AI automation, enterprise workflows, creative production, motion, UI/UX, and frontend delivery in one studio practice.",
-    url: "https://huygenstudios.com",
+    title: "Huygen Studios | AI Automation, Creative Production & Digital Delivery",
+    description: "Huygen Studios combines enterprise AI automation, WhatsApp workflows, custom voice agents, brand design, and premium Next.js WebGL systems in one studio practice.",
+    url: "https://www.huygenstudios.com",
+    type: "website",
   },
 };
 
 export default function HomePage() {
-  return <Web3Home />;
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "Organization",
+        "@id": "https://www.huygenstudios.com/#organization",
+        "name": "Huygen Studios",
+        "url": "https://www.huygenstudios.com",
+        "logo": {
+          "@type": "ImageObject",
+          "url": "https://www.huygenstudios.com/logo.png"
+        },
+        "sameAs": [
+          "https://github.com/Huygen-Studios"
+        ],
+        "contactPoint": {
+          "@type": "ContactPoint",
+          "telephone": "+91-9262102440",
+          "contactType": "customer service",
+          "email": "hello@huygenstudios.com"
+        }
+      },
+      {
+        "@type": "WebSite",
+        "@id": "https://www.huygenstudios.com/#website",
+        "url": "https://www.huygenstudios.com",
+        "name": "Huygen Studios",
+        "publisher": {
+          "@id": "https://www.huygenstudios.com/#organization"
+        }
+      }
+    ]
+  };
+
+  return (
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
+      <Web3Home />
+    </>
+  );
 }

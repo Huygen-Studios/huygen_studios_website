@@ -81,7 +81,14 @@ const faqs = [
   ["Is ongoing support available?", "Yes. Support can cover workflow monitoring, automation maintenance, content production, interface improvements, analytics review, and structured iteration."],
 ];
 
-const nav = [["Capabilities", "/#capabilities"], ["Enterprise", "/#enterprise"], ["Work", "/#work"], ["Process", "/#process"], ["Creatives", "/creatives"], ["Contact", "/#contact"]];
+const nav = [
+  ["Services", "/services"],
+  ["About", "/about"],
+  ["Pricing", "/pricing"],
+  ["FAQ", "/faq"],
+  ["Blog", "/blog"],
+  ["Contact", "/contact"]
+];
 
 export function Web3Home() {
   const root = useRef<HTMLElement>(null);
@@ -270,7 +277,7 @@ export function Web3Home() {
             <p className="hero-summary">Huygen Studios combines automation, enterprise workflows, creative production, interface design, motion, and frontend engineering in one delivery practice.</p>
             <div className="hero-actions">
               <a href="mailto:hello@huygenstudios.com" className="button primary roll-control"><TextRoll>Discuss a project</TextRoll> <ArrowUpRight size={17} /></a>
-              <Link href="#capabilities" className="button secondary roll-control"><TextRoll>Review capabilities</TextRoll> <ArrowDownRight size={17} /></Link>
+              <Link href="/services" className="button secondary roll-control"><TextRoll>Review capabilities</TextRoll> <ArrowDownRight size={17} /></Link>
             </div>
           </div>
           <div className="hero-axis"><span>STRATEGY</span><span>DESIGN</span><span>AUTOMATION</span><span>DELIVERY</span></div>
@@ -289,6 +296,35 @@ export function Web3Home() {
           <div className="shell">
             <header className="chapter-head"><h2 className="reveal">Capabilities</h2><p>Integrated services for operational improvement, brand production, product interfaces, and digital growth.</p></header>
             <div className="cap-grid">{capabilities.map((item, index) => <article className={`cap-card ${item.className}`} key={item.title}><span>{String(index + 1).padStart(2, "0")}</span><div><h3>{item.title}</h3><p>{item.copy}</p><small>{item.detail}</small></div><ArrowUpRight /></article>)}</div>
+          </div>
+        </section>
+
+        <section className="chapter">
+          <div className="shell">
+            <header className="chapter-head">
+              <h2 className="reveal">Who we serve</h2>
+              <p>Custom technology integrations for teams that need clear, high-density execution.</p>
+            </header>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 pt-8 border-t border-[rgba(255,255,255,0.18)]">
+              <div>
+                <h3 className="text-xl font-bold mb-3 text-white">Enterprise Operations</h3>
+                <p className="text-[#b8bac1] text-sm leading-relaxed">
+                  We help established organizations automate operational intake, run custom LLM voice qualification scripts, and scale WhatsApp conversational outreach without manual overhead.
+                </p>
+              </div>
+              <div>
+                <h3 className="text-xl font-bold mb-3 text-white">Product Design Labs</h3>
+                <p className="text-[#b8bac1] text-sm leading-relaxed">
+                  We deliver custom React frameworks, high-end WebGL interactive elements, and robust design system structures to bring creative concepts to market quickly.
+                </p>
+              </div>
+              <div>
+                <h3 className="text-xl font-bold mb-3 text-white">Trust & Transparency</h3>
+                <p className="text-[#b8bac1] text-sm leading-relaxed">
+                  We build with security-first web protocols. Our clients enjoy direct access to the builders, complete code ownership, and verified sandbox environments before production release.
+                </p>
+              </div>
+            </div>
           </div>
         </section>
 
