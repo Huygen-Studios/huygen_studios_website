@@ -5,10 +5,15 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   children: ReactNode;
 }
 
-export function TextRoll({ children, className }: { children: string; className?: string }) {
+export function TextRoll({ children, className }: { children: any; className?: string }) {
+  // Normalize children to a primitive string to prevent React 19 from stripping the data-text attribute
+  const text = typeof children === "string"
+    ? children
+    : (Array.isArray(children) ? children.join("") : String(children || ""));
+
   return (
-    <span className={clsx("text-roll", className)} data-text={children}>
-      <span>{children}</span>
+    <span className={`text-roll ${className || ""}`.trim()} data-text={text}>
+      <span>{text}</span>
     </span>
   );
 }
@@ -20,6 +25,9 @@ export function Button({
   disabled,
   ...props
 }: ButtonProps) {
+  const isStringLike = typeof children === "string" ||
+    (Array.isArray(children) && children.every(c => typeof c === "string"));
+
   return (
     <button
       {...props}
@@ -34,7 +42,7 @@ export function Button({
         className,
       )}
     >
-      {typeof children === "string" ? <TextRoll>{children}</TextRoll> : children}
+      {isStringLike ? <TextRoll>{children}</TextRoll> : children}
     </button>
   );
 }
