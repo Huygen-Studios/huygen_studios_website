@@ -53,22 +53,26 @@ export function SecondaryPageLayout({ children }: SecondaryPageLayoutProps) {
 
       {/* Mobile Nav */}
       <div className={`mobile-nav ${mobileOpen ? "open" : ""}`}>
-        <button aria-label="Close navigation" onClick={() => setMobileOpen(false)}>
-          <X />
-        </button>
-        {nav.map(([label, href]) => (
-          <Link
-            className="roll-control"
-            href={href}
-            key={href}
-            onClick={() => setMobileOpen(false)}
-          >
-            <TextRoll>{label}</TextRoll>
-          </Link>
-        ))}
-        <a className="roll-control" href="mailto:hello@huygenstudios.com">
-          <TextRoll>Start a project</TextRoll>
-        </a>
+        {mobileOpen && (
+          <>
+            <button aria-label="Close navigation" onClick={() => setMobileOpen(false)}>
+              <X />
+            </button>
+            {nav.map(([label, href]) => (
+              <Link
+                className="roll-control"
+                href={href}
+                key={href}
+                onClick={() => setMobileOpen(false)}
+              >
+                <TextRoll>{label}</TextRoll>
+              </Link>
+            ))}
+            <a className="roll-control" href="mailto:hello@huygenstudios.com">
+              <TextRoll>Start a project</TextRoll>
+            </a>
+          </>
+        )}
       </div>
 
       {/* Content wrapper */}

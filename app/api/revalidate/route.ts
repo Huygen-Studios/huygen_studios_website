@@ -34,7 +34,7 @@ export async function POST(req: NextRequest) {
 
     // Always revalidate the blog catalog list
     revalidatePath("/blog");
-    revalidateTag("blog-list", "default");
+    revalidateTag("marble-posts", "default");
 
     // Also revalidate the canonical sitemap route
     revalidatePath("/sitemap.xml");
@@ -42,7 +42,7 @@ export async function POST(req: NextRequest) {
     // Revalidate specific post page if slug is provided
     if (slug && typeof slug === "string") {
       revalidatePath(`/blog/${slug}`);
-      revalidateTag(`blog-post-${slug}`, "default");
+      revalidateTag(`marble-post-${slug}`, "default");
       return NextResponse.json({
         revalidated: true,
         revalidatedSlug: slug,
@@ -86,12 +86,12 @@ export async function GET(req: NextRequest) {
     }
 
     revalidatePath("/blog");
-    revalidateTag("blog-list", "default");
+    revalidateTag("marble-posts", "default");
     revalidatePath("/sitemap.xml");
 
     if (slug) {
       revalidatePath(`/blog/${slug}`);
-      revalidateTag(`blog-post-${slug}`, "default");
+      revalidateTag(`marble-post-${slug}`, "default");
       return NextResponse.json({
         revalidated: true,
         revalidatedSlug: slug,

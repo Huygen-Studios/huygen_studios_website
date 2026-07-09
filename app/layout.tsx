@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from "next";
 import Script from "next/script";
 import { Space_Grotesk, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
-
+import "@/components/web3/web3.css";
 
 const displayFont = Space_Grotesk({
   variable: "--font-display",

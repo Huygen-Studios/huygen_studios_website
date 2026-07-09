@@ -3,10 +3,25 @@ import { BlogPost } from "../blog/types";
 import { marbleFetch } from "./client";
 import { MarblePost } from "./types";
 
+export function getPostCoverImage(post: any): string | null {
+  if (!post) return null;
+  return (
+    post.coverImage?.url ||
+    post.coverImage?.src ||
+    post.featuredImage?.url ||
+    post.featuredImage?.src ||
+    post.image?.url ||
+    post.image?.src ||
+    post.cover?.url ||
+    post.cover?.src ||
+    (typeof post.coverImage === "string" ? post.coverImage : null)
+  );
+}
+
 export async function getMarblePosts(): Promise<BlogPost[]> {
   try {
     const res = await marbleFetch<any>("/posts", {
-      next: { revalidate: 3600, tags: ["blog-list"] },
+      next: { revalidate: 60, tags: ["marble-posts"] },
     });
 
     // Handle standard "posts" key or "data" array in response
@@ -27,7 +42,7 @@ export async function getMarblePosts(): Promise<BlogPost[]> {
 export async function getMarblePostBySlug(slug: string): Promise<BlogPost | null> {
   try {
     const res = await marbleFetch<any>(`/posts/${slug}`, {
-      next: { revalidate: 3600, tags: [`blog-post-${slug}`] },
+      next: { revalidate: 60, tags: ["marble-posts", `marble-post-${slug}`] },
     });
 
     const post: MarblePost | null = res.post || res.data || null;
@@ -88,35 +103,8 @@ function mapMarblePostToBlogPost(post: MarblePost): BlogPost {
   const publishedAt = post.publishedAt || new Date().toISOString();
   const updatedAt = post.updatedAt || publishedAt;
 
-  // Safe cover image URL extraction
-  let coverImageUrl: string | undefined = undefined;
-  if (post.coverImage) {
-    if (typeof post.coverImage === "string") {
-      coverImageUrl = post.coverImage;
-    } else if (typeof post.coverImage === "object") {
-      const anyImage = post.coverImage as any;
-      coverImageUrl = anyImage.url || anyImage.src || anyImage.featuredImage?.url || undefined;
-    }
-  }
-  
-  // If not found in coverImage, check other potential locations
-  if (!coverImageUrl && (post as any).image) {
-    const img = (post as any).image;
-    if (typeof img === "string") {
-      coverImageUrl = img;
-    } else if (typeof img === "object") {
-      coverImageUrl = img.url || img.src || undefined;
-    }
-  }
-
-  if (!coverImageUrl && (post as any).featuredImage) {
-    const img = (post as any).featuredImage;
-    if (typeof img === "string") {
-      coverImageUrl = img;
-    } else if (typeof img === "object") {
-      coverImageUrl = img.url || img.src || undefined;
-    }
-  }
+  // Safe cover image URL extraction using getPostCoverImage helper
+  const coverImageUrl = getPostCoverImage(post) || undefined;
 
   return {
     id: post.id || Math.random().toString(36).substring(2, 9),
