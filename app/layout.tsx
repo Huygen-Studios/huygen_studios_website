@@ -26,7 +26,7 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://huygenstudios.com"),
+  metadataBase: new URL("https://www.huygenstudios.com"),
   icons: {
     icon: [
       { url: '/favicon-32x32.png', sizes: '32x32', type: 'image/png' },
@@ -97,7 +97,7 @@ export const metadata: Metadata = {
     "data-driven growth",
     "AI sales assistants"
   ],
-  authors: [{ name: "Huygen Studios", url: "https://huygenstudios.com" }],
+  authors: [{ name: "Huygen Studios", url: "https://www.huygenstudios.com" }],
   creator: "Huygen Studios",
   publisher: "Huygen Studios",
   formatDetection: {
@@ -112,7 +112,7 @@ export const metadata: Metadata = {
     title: "Huygen Studios | Premium AI Automation & Web Agency",
     description:
       "Huygen Studios is the premier agency for elite AI automation, voice agents, and cinematic web experiences. Transform your business today.",
-    url: "https://huygenstudios.com",
+    url: "https://www.huygenstudios.com",
     siteName: "Huygen Studios",
     images: [
       {
@@ -145,7 +145,7 @@ export const metadata: Metadata = {
     },
   },
   verification: {
-    google: "add-your-google-site-verification-here", // REPLACE with actual tag
+    google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION || "",
   },
   other: {
     "google-adsense-account": "ca-pub-1790543418739606",
@@ -156,8 +156,8 @@ const jsonLd = {
   "@context": "https://schema.org",
   "@type": "Organization",
   name: "Huygen Studios",
-  url: "https://huygenstudios.com",
-  logo: "https://huygenstudios.com/skiper76.png",
+  url: "https://www.huygenstudios.com",
+  logo: "https://www.huygenstudios.com/skiper76.png",
   description: "Premium agency for AI automation, voice agents, and cinematic web experiences.",
   contactPoint: {
     "@type": "ContactPoint",

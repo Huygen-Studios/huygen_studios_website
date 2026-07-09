@@ -11,6 +11,20 @@ const nextConfig: NextConfig = {
   turbopack: {
     root: dirname(appRoot),
   },
+  async redirects() {
+    return [
+      {
+        source: "/terms-of-service",
+        destination: "/terms",
+        permanent: true,
+      },
+      {
+        source: "/policy",
+        destination: "/privacy-policy",
+        permanent: true,
+      },
+    ];
+  },
   async headers() {
     return [
       {
