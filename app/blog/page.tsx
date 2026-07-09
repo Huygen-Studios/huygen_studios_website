@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { SecondaryPageLayout } from "@/components/web3/SecondaryPageLayout";
-import { blogPosts } from "./posts";
+import { getBlogPosts } from "@/lib/blog";
 
 export const metadata: Metadata = {
   title: "Studio Blog & Insights | Huygen Studios",
@@ -9,7 +9,12 @@ export const metadata: Metadata = {
   alternates: { canonical: "/blog" },
 };
 
-export default function BlogCatalogPage() {
+export default async function BlogCatalogPage() {
+  const posts = await getBlogPosts();
+
+  // Extract unique categories for catalog filter display
+  const categories = Array.from(new Set(posts.map((p) => p.category)));
+
   return (
     <SecondaryPageLayout>
       <section className="chapter">
@@ -22,22 +27,46 @@ export default function BlogCatalogPage() {
             </p>
           </div>
 
+          {/* Categories display */}
+          {categories.length > 0 && (
+            <div className="flex flex-wrap gap-3 mb-12 pb-6 border-b border-[rgba(255,255,255,0.08)]">
+              <span className="text-xs font-mono text-neutral-500 self-center mr-2">Categories:</span>
+              {categories.map((cat) => (
+                <span
+                  key={cat}
+                  className="px-3 py-1 rounded-full text-xs font-mono bg-[rgba(255,255,255,0.05)] text-neutral-300 border border-[rgba(255,255,255,0.08)]"
+                >
+                  {cat}
+                </span>
+              ))}
+            </div>
+          )}
+
           <div className="grid grid-cols-1 gap-12 border-t border-[rgba(255,255,255,0.18)] pt-12">
-            {blogPosts.map((post) => (
+            {posts.map((post) => (
               <article key={post.slug} className="border border-[rgba(255,255,255,0.1)] p-8 rounded-lg bg-[#0c0d10] hover:border-[rgba(74,121,255,0.4)] transition-all">
                 <div className="flex justify-between items-center text-xs text-[#93969e] font-mono mb-4">
-                  <span>{post.date}</span>
-                  <span>{post.author}</span>
+                  <div className="flex gap-2">
+                    <span>{new Date(post.publishedAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</span>
+                    <span>•</span>
+                    <span>{post.readingTime}</span>
+                  </div>
+                  <span>{post.author.name}</span>
                 </div>
                 <h2 className="text-2xl font-bold text-white mb-4 hover:text-[#4a79ff] transition-colors">
                   <Link href={`/blog/${post.slug}`}>{post.title}</Link>
                 </h2>
                 <p className="text-[#b8bac1] text-sm leading-relaxed mb-6">
-                  {post.summary}
+                  {post.description}
                 </p>
-                <Link href={`/blog/${post.slug}`} className="text-white text-sm font-semibold underline hover:text-[#4a79ff] transition-colors">
-                  Read Article &rarr;
-                </Link>
+                <div className="flex justify-between items-center">
+                  <Link href={`/blog/${post.slug}`} className="text-white text-sm font-semibold underline hover:text-[#4a79ff] transition-colors">
+                    Read Article &rarr;
+                  </Link>
+                  <span className="text-xs font-mono bg-[rgba(74,121,255,0.1)] text-[#4a79ff] px-2 py-0.5 rounded border border-[rgba(74,121,255,0.2)]">
+                    {post.category}
+                  </span>
+                </div>
               </article>
             ))}
           </div>
