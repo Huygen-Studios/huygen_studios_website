@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { ArrowDownRight, ArrowLeft, ArrowRight, ArrowUpRight, Menu, X } from "lucide-react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
@@ -10,6 +10,8 @@ import Lenis from "lenis";
 import { PortfolioMarquee } from "./PortfolioMarquee";
 import { TextRoll } from "../Button";
 import "./web3.css";
+
+const useIsomorphicLayoutEffect = typeof window !== "undefined" ? useLayoutEffect : useEffect;
 
 const capabilities = [
   {
@@ -54,7 +56,7 @@ const work = [
   ["Service conversion framework", "Internal build", "A focused website and follow-up architecture for turning qualified interest into a reliable next step."],
 ];
 
-const process = [
+const processSteps = [
   ["Discover", "Define the operating problem, audience, constraints, current tools, and the evidence that will mark progress."],
   ["Structure", "Map the workflow, information architecture, content hierarchy, interface states, and delivery priorities."],
   ["Design", "Develop the visual system, interaction behavior, motion language, and practical review prototype."],
@@ -88,13 +90,24 @@ export function Web3Home() {
   const [activeProcess, setActiveProcess] = useState(0);
   const [openFaq, setOpenFaq] = useState(0);
 
-  useEffect(() => {
+  useIsomorphicLayoutEffect(() => {
     if (!root.current) return;
     gsap.registerPlugin(ScrollTrigger);
-    const reduce = false;
+    const reduce = typeof window !== "undefined"
+      ? window.matchMedia("(prefers-reduced-motion: reduce)").matches
+      : false;
     const mobile = matchMedia("(max-width: 767px)").matches;
     let lenis: Lenis | undefined;
     let frame = 0;
+
+    if (process.env.NODE_ENV === "development") {
+      console.log("[Animation Debug] Initializing homepage animations.", {
+        reduceMotion: reduce,
+        mobileLayout: mobile,
+        isomorphicLayoutEffect: true,
+        fontsLoaded: typeof document !== "undefined" && "fonts" in document ? document.fonts.status : "unknown"
+      });
+    }
 
     if (!reduce) {
       lenis = new Lenis({ duration: 1.08, smoothWheel: true });
@@ -107,6 +120,11 @@ export function Web3Home() {
     }
 
     const ctx = gsap.context(() => {
+      // Force initial animation states immediately to prevent hydration flash
+      gsap.set(".page", { clipPath: "inset(100% 0 0)" });
+      gsap.set(".hero-line span", { yPercent: 110 });
+      gsap.set(".hero-summary, .hero-actions, .hero-index", { opacity: 0, y: 22 });
+
       gsap.timeline()
         .fromTo(".page", { clipPath: "inset(100% 0 0)" }, { clipPath: "inset(0% 0 0)", duration: reduce ? 0 : .8, ease: "power4.inOut" })
         .fromTo(".hero-line span", { yPercent: 110 }, { yPercent: 0, duration: reduce ? 0 : .9, stagger: .08, ease: "power4.out" }, .12)
@@ -170,6 +188,16 @@ export function Web3Home() {
       }
     }, root);
 
+    // Sync layout when fonts are fully loaded to prevent wrong trigger offsets
+    if (typeof window !== "undefined" && "fonts" in document) {
+      document.fonts.ready.then(() => {
+        if (process.env.NODE_ENV === "development") {
+          console.log("[Animation Debug] Web fonts are loaded. Refreshing ScrollTrigger.");
+        }
+        ScrollTrigger.refresh();
+      });
+    }
+
     // Call ScrollTrigger.refresh after initial layout settles (e.g. fonts and 3D shapes load)
     const timer = setTimeout(() => {
       ScrollTrigger.refresh();
@@ -184,7 +212,7 @@ export function Web3Home() {
   }, []);
 
   const moveProcess = (direction: number) => {
-    const next = Math.max(0, Math.min(process.length - 1, activeProcess + direction));
+    const next = Math.max(0, Math.min(processSteps.length - 1, activeProcess + direction));
     setActiveProcess(next);
     processTrack.current?.children[next]?.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "start" });
   };
@@ -260,8 +288,8 @@ export function Web3Home() {
         </section>
 
         <section id="process" className="process chapter">
-          <div className="shell process-head"><div><h2 className="reveal">A structured delivery process</h2><p>Each phase reduces uncertainty before the next investment is made.</p></div><div className="process-controls"><button aria-label="Previous process step" disabled={activeProcess === 0} onClick={() => moveProcess(-1)}><ArrowLeft /></button><span>{String(activeProcess + 1).padStart(2, "0")} / {String(process.length).padStart(2, "0")}</span><button aria-label="Next process step" disabled={activeProcess === process.length - 1} onClick={() => moveProcess(1)}><ArrowRight /></button></div></div>
-          <div className="process-track" ref={processTrack} onScroll={(event) => { const element = event.currentTarget; setActiveProcess(Math.min(5, Math.round(element.scrollLeft / Math.max(1, element.clientWidth * .68)))); }}>{process.map((item, index) => <article className={activeProcess === index ? "active" : ""} tabIndex={0} key={item[0]}><span>{String(index + 1).padStart(2, "0")}</span><h3>{item[0]}</h3><p>{item[1]}</p></article>)}</div>
+          <div className="shell process-head"><div><h2 className="reveal">A structured delivery process</h2><p>Each phase reduces uncertainty before the next investment is made.</p></div><div className="process-controls"><button aria-label="Previous process step" disabled={activeProcess === 0} onClick={() => moveProcess(-1)}><ArrowLeft /></button><span>{String(activeProcess + 1).padStart(2, "0")} / {String(processSteps.length).padStart(2, "0")}</span><button aria-label="Next process step" disabled={activeProcess === processSteps.length - 1} onClick={() => moveProcess(1)}><ArrowRight /></button></div></div>
+          <div className="process-track" ref={processTrack} onScroll={(event) => { const element = event.currentTarget; setActiveProcess(Math.min(5, Math.round(element.scrollLeft / Math.max(1, element.clientWidth * .68)))); }}>{processSteps.map((item, index) => <article className={activeProcess === index ? "active" : ""} tabIndex={0} key={item[0]}><span>{String(index + 1).padStart(2, "0")}</span><h3>{item[0]}</h3><p>{item[1]}</p></article>)}</div>
         </section>
 
         <section className="faq chapter">

@@ -184,6 +184,13 @@ export default function RootLayout({
         {/* Prevent Dark Reader extension from causing hydration errors */}
         <meta name="color-scheme" content="dark" />
         <meta name="darkreader-lock" />
+        <Script
+          id="js-enabled-script"
+          strategy="beforeInteractive"
+          dangerouslySetInnerHTML={{
+            __html: `document.documentElement.classList.add('js-enabled');`
+          }}
+        />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}

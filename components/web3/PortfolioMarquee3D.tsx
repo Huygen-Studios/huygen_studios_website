@@ -575,6 +575,7 @@ function PortfolioCard({ item, index }: PortfolioCardProps) {
           touchAction: "none"
         }}
       >
+        {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
         <View track={viewRef as any} className="w-full h-full pointer-events-none">
           <SceneWrapper>
             <ShapeRenderer type={item.type} isHovered={hovered} mousePos={mousePos} />
@@ -664,6 +665,7 @@ export default function PortfolioMarquee3D({ portfolioItems }: PortfolioMarquee3
 
       {/* Global transparent WebGL canvas tracking all view portals */}
       <Canvas
+        /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
         eventSource={containerRef as any}
         camera={{ position: [0, 0, 1.8], fov: 45 }}
         style={{

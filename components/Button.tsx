@@ -5,7 +5,7 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   children: ReactNode;
 }
 
-export function TextRoll({ children, className }: { children: any; className?: string }) {
+export function TextRoll({ children, className }: { children: ReactNode; className?: string }) {
   // Normalize children to a primitive string to prevent React 19 from stripping the data-text attribute
   const text = typeof children === "string"
     ? children

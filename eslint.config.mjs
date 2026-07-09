@@ -15,6 +15,8 @@ const eslintConfig = defineConfig([
     "next-env.d.ts",
     "convert.js",
     "Spline Skill/**",
+    "huygen-creatives/**",
+    "components/creatives/**",
   ]),
   {
     files: [
