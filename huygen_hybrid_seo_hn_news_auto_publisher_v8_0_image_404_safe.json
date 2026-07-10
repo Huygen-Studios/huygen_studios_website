@@ -1,0 +1,1223 @@
+{
+  "name": "Huygen Hybrid SEO + HN Latest Auto Publisher v8.0 Image + 404 Safe",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "days",
+              "triggerAtHour": 9,
+              "triggerAtMinute": 0
+            },
+            {
+              "field": "days",
+              "triggerAtHour": 16,
+              "triggerAtMinute": 0
+            }
+          ]
+        }
+      },
+      "id": "ca65fc55-0b91-4cf8-aec8-842eaa5c7990",
+      "name": "Twice Daily 09:00 SEO / 16:00 News Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -1260,
+        -80
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "41e87123-7c70-408b-9b2c-e3ec3ea06024",
+      "name": "Manual Test Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -1260,
+        140
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "/*\nHuygen Studios Hybrid SEO + Hacker News Latest Auto Publisher v7.8\n- 2 posts/day total.\n- Morning: evergreen SEO cluster article with a stronger AI/business-automation SEO prompt.\n- Afternoon/news mode: fetches latest Hacker News directly from news.ycombinator.com/news or /newest.\n- HN source alternates automatically, but can be forced with HN_ROUTE=news or HN_ROUTE=newest.\n- Duplicate HN story IDs are avoided using workflow static data and optional env exclusions.\n*/\n\nconst siteUrl = ($env.NEXT_PUBLIC_SITE_URL || 'https://www.huygenstudios.com').replace(/\\/$/, '');\nconst now = new Date();\nconst override = String($env.V7_MANUAL_MODE || $env.CONTENT_MODE || '').trim().toLowerCase();\nlet mode;\n\nif (override === 'seo' || override === 'news') {\n  mode = override;\n} else {\n  // 09:00 schedule -> seo. 16:00 schedule -> news.\n  mode = now.getHours() < 13 ? 'seo' : 'news';\n}\n\nconst routeOverride = String($env.HN_ROUTE || $env.HN_SOURCE || '').trim().toLowerCase();\nconst routeSeed = Math.floor(now.getTime() / 43200000); // flips roughly every 12 hours\nconst hnRoute = ['news', 'newest'].includes(routeOverride)\n  ? routeOverride\n  : (routeSeed % 2 === 0 ? 'news' : 'newest');\nconst hnFetchUrl = `https://news.ycombinator.com/${hnRoute}`;\n\nreturn [{\n  json: {\n    mode,\n    isNewsMode: mode === 'news',\n    siteUrl,\n    scheduledAt: now.toISOString(),\n    hnRoute,\n    hnFetchUrl,\n    hnSourcePage: hnFetchUrl,\n    hnStrategy: routeOverride ? `forced:${hnRoute}` : 'auto-alternating-news-newest',\n    hnAiPriorityTerms: $env.HN_AI_PRIORITY_TERMS || 'ai,llm,agent,agents,openai,anthropic,gemini,claude,model,models,inference,rag,automation,voice,chatbot,robot,workflow,search,seo,developer tools,devtools,frontend,web,design,video,image,creative,crm,sales,marketing'\n  }\n}];\n"
+      },
+      "id": "0ba937c2-9f14-44f1-a279-63cd3b5b7e76",
+      "name": "Decide Content Mode",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -980,
+        20
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "news-mode",
+              "leftValue": "={{$json.isNewsMode}}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "169290a1-d82f-4eb5-a2d4-e773e64fec9d",
+      "name": "Is News Mode?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -740,
+        20
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{$json.hnFetchUrl || 'https://news.ycombinator.com/news'}}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "User-Agent",
+              "value": "Mozilla/5.0 HuygenStudiosBot/1.0 (+https://www.huygenstudios.com)"
+            },
+            {
+              "name": "Accept",
+              "value": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "id": "db2a8e1f-11b8-4729-95dd-f90c5c6badd3",
+      "name": "Fetch Hacker News Signals",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -500,
+        -120
+      ],
+      "retryOnFail": true,
+      "maxTries": 4,
+      "waitBetweenTries": 15000,
+      "notes": "Retry policy: retries up to 4 times with 15s between attempts."
+    },
+    {
+      "parameters": {
+        "jsCode": "const decision = $('Decide Content Mode').first().json;\nconst siteUrl = decision.siteUrl;\nconst now = new Date();\nconst datePart = now.toISOString().slice(0, 10);\nconst hnRoute = decision.hnRoute || 'news';\nconst hnSourcePage = decision.hnSourcePage || `https://news.ycombinator.com/${hnRoute}`;\n\nconst response = $input.first().json || {};\n\nfunction clean(s) {\n  return String(s || '').replace(/\\s+/g, ' ').trim();\n}\nfunction slugify(s) {\n  return String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 72);\n}\nfunction decodeHtml(s) {\n  const named = {\n    amp: '&', lt: '<', gt: '>', quot: '\"', apos: \"'\", nbsp: ' ', ndash: '–', mdash: '—', rsquo: '’', lsquo: '‘', rdquo: '”', ldquo: '“'\n  };\n  return String(s || '')\n    .replace(/&#(\\d+);/g, (_, n) => String.fromCharCode(parseInt(n, 10)))\n    .replace(/&#x([0-9a-f]+);/gi, (_, n) => String.fromCharCode(parseInt(n, 16)))\n    .replace(/&([a-z]+);/gi, (_, n) => named[n.toLowerCase()] || `&${n};`);\n}\nfunction stripTags(s) {\n  return decodeHtml(String(s || '').replace(/<[^>]+>/g, ' ')).replace(/\\s+/g, ' ').trim();\n}\nfunction absoluteHnUrl(url) {\n  const u = decodeHtml(String(url || '').trim());\n  if (!u) return '';\n  if (/^https?:\\/\\//i.test(u)) return u;\n  if (u.startsWith('item?id=')) return `https://news.ycombinator.com/${u}`;\n  if (u.startsWith('/')) return `https://news.ycombinator.com${u}`;\n  return `https://news.ycombinator.com/${u}`;\n}\nfunction getHtmlPayload(obj) {\n  if (typeof obj === 'string') return obj;\n  for (const key of ['body', 'data', 'html', 'response']) {\n    if (typeof obj?.[key] === 'string' && obj[key].includes('athing')) return obj[key];\n  }\n  for (const value of Object.values(obj || {})) {\n    if (typeof value === 'string' && value.includes('athing')) return value;\n  }\n  return typeof obj === 'object' ? JSON.stringify(obj) : String(obj || '');\n}\nfunction parseHackerNewsHtml(html) {\n  const stories = [];\n  const full = String(html || '');\n  const blockRegex = /<tr\\s+class=[\"']athing[^>]*\\bid=[\"']?(\\d+)[\"']?[^>]*>([\\s\\S]*?)(?=<tr\\s+class=[\"']athing|<\\/table>|<\\/body>|$)/gi;\n  let match;\n\n  while ((match = blockRegex.exec(full)) !== null) {\n    const id = clean(match[1] || '');\n    const part = match[2] || '';\n    const storyRow = part.split(/<\\/tr>/i)[0] || '';\n    const afterStoryRow = part.slice(storyRow.length);\n    const subtext = (afterStoryRow.match(/<td\\s+class=[\"']subtext[\"'][^>]*>([\\s\\S]*?)<\\/td>/i) || [])[1] || '';\n\n    const rank = Number((storyRow.match(/<span\\s+class=[\"']rank[\"'][^>]*>(\\d+)\\./i) || [])[1] || 999);\n    let titleMatch = storyRow.match(/<span\\s+class=[\"']titleline[\"'][^>]*>\\s*<a\\s+href=[\"']([^\"']+)[\"'][^>]*>([\\s\\S]*?)<\\/a>/i);\n    if (!titleMatch) titleMatch = storyRow.match(/<a\\s+href=[\"']([^\"']+)[\"'][^>]*class=[\"']?[^\"'>]*storylink[^\"'>]*[\"']?[^>]*>([\\s\\S]*?)<\\/a>/i);\n    if (!titleMatch) titleMatch = storyRow.match(/<td\\s+class=[\"']title[\"'][\\s\\S]*?<a\\s+href=[\"']([^\"']+)[\"'][^>]*>([\\s\\S]*?)<\\/a>/i);\n\n    const rawUrl = titleMatch ? titleMatch[1] : '';\n    const title = titleMatch ? stripTags(titleMatch[2]) : '';\n    if (!id || !title) continue;\n\n    const url = absoluteHnUrl(rawUrl);\n    const hnUrl = `https://news.ycombinator.com/item?id=${id}`;\n    const points = Number((subtext.match(/<span\\s+class=[\"']score[\"'][^>]*>(\\d+)\\s+points?/i) || [])[1] || 0);\n    let comments = 0;\n    const commentText = stripTags(subtext);\n    const c1 = commentText.match(/(\\d+)\\s+comments?/i);\n    if (c1) comments = Number(c1[1]);\n    const createdAt = decodeHtml((subtext.match(/<span\\s+class=[\"']age[\"'][^>]*title=[\"']([^\"']+)/i) || [])[1] || '');\n\n    stories.push({\n      hnId: id,\n      title,\n      url: url || hnUrl,\n      hnUrl,\n      points,\n      comments,\n      rank,\n      createdAt,\n      route: hnRoute,\n      sourcePage: hnSourcePage\n    });\n  }\n  return stories;\n}\nfunction parseAlgoliaFallback(obj) {\n  const hits = Array.isArray(obj?.hits) ? obj.hits : [];\n  return hits.map(h => {\n    const id = String(h.objectID || h.story_id || '').trim();\n    const title = clean(h.title || h.story_title);\n    const url = h.url || (id ? `https://news.ycombinator.com/item?id=${id}` : '');\n    return {\n      hnId: id,\n      title,\n      url,\n      hnUrl: id ? `https://news.ycombinator.com/item?id=${id}` : url,\n      points: Number(h.points || 0),\n      comments: Number(h.num_comments || 0),\n      rank: 999,\n      createdAt: h.created_at || h.created_at_i || '',\n      route: hnRoute,\n      sourcePage: hnSourcePage\n    };\n  }).filter(s => s.hnId && s.title);\n}\nfunction splitEnvList(name, fallback) {\n  return String($env[name] || fallback || '')\n    .split(/[|,]/)\n    .map(s => s.trim().toLowerCase())\n    .filter(Boolean);\n}\n\nconst aiPriorityTerms = splitEnvList('HN_AI_PRIORITY_TERMS', decision.hnAiPriorityTerms || 'ai,llm,agent,agents,openai,anthropic,gemini,claude,model,models,inference,rag,automation,voice,chatbot,robot,workflow,search,seo,developer tools,devtools,frontend,web,design,video,image,creative,crm,sales,marketing');\nconst blockedTerms = splitEnvList('HN_BLOCKED_TERMS', 'crypto price,bitcoin price,nsfw,celebrity gossip,sports betting,political scandal');\nconst envRecentIds = splitEnvList('HN_RECENT_STORY_IDS', '');\nconst envBlockedIds = splitEnvList('HN_BLOCKED_STORY_IDS', '');\n\nlet stories = parseAlgoliaFallback(response);\nif (!stories.length) stories = parseHackerNewsHtml(getHtmlPayload(response));\n\nconst localSeen = new Set();\nstories = stories\n  .map(s => {\n    const text = `${s.title} ${s.url}`.toLowerCase();\n    const aiHits = aiPriorityTerms.filter(term => text.includes(term));\n    const blocked = blockedTerms.some(term => text.includes(term)) || envBlockedIds.includes(String(s.hnId).toLowerCase());\n    const localKey = `${s.hnId || ''}|${String(s.url || '').toLowerCase()}|${s.title.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim()}`;\n    return {\n      ...s,\n      aiHits,\n      aiScore: aiHits.length,\n      blocked,\n      localKey,\n      priorityScore: aiHits.length * 120 + Math.max(0, 80 - Number(s.rank || 80)) + Math.min(Number(s.points || 0), 500) / 5 + Math.min(Number(s.comments || 0), 300) / 3\n    };\n  })\n  .filter(s => {\n    if (!s.title || !s.url || s.blocked) return false;\n    if (localSeen.has(s.localKey)) return false;\n    localSeen.add(s.localKey);\n    return true;\n  });\n\n// Persistently avoid repeating the same Hacker News story across workflow runs.\nlet staticData;\ntry {\n  staticData = $getWorkflowStaticData('global');\n} catch (e) {\n  staticData = {};\n}\nif (!Array.isArray(staticData.hnUsedStoryIds)) staticData.hnUsedStoryIds = [];\nconst recentIds = new Set([...staticData.hnUsedStoryIds.map(String), ...envRecentIds.map(String)]);\nlet freshStories = stories.filter(s => !recentIds.has(String(s.hnId)));\nlet duplicateSkipped = stories.length - freshStories.length;\n\n// If every good story was already used, reset the rolling memory so the workflow can still publish.\nif (freshStories.length < 3 && stories.length >= 3) {\n  staticData.hnUsedStoryIds = [];\n  recentIds.clear();\n  freshStories = stories;\n  duplicateSkipped = 0;\n}\n\nconst aiStories = freshStories.filter(s => s.aiScore > 0);\nconst selectedPool = aiStories.length >= 3 ? aiStories : freshStories;\nlet sources = selectedPool\n  .sort((a, b) => b.priorityScore - a.priorityScore)\n  .slice(0, 8);\n\n// Final fallback: keep the workflow alive with the parsed latest HN stories even if AI-specific stories are sparse.\nif (sources.length < 3) {\n  sources = stories.sort((a, b) => Number(a.rank || 999) - Number(b.rank || 999)).slice(0, 8);\n}\n\nif (!sources.length) {\n  throw new Error(`Could not parse Hacker News stories from ${hnSourcePage}. Check the HTTP response shape for the Fetch Hacker News Signals node.`);\n}\n\nconst top = sources[0];\nif (top?.hnId) {\n  staticData.hnUsedStoryIds = [String(top.hnId), ...staticData.hnUsedStoryIds.map(String).filter(id => id !== String(top.hnId))].slice(0, 80);\n  staticData.hnLastRoute = hnRoute;\n  staticData.hnLastStoryTitle = top.title;\n  staticData.hnLastStoryUrl = top.hnUrl;\n  staticData.hnLastSelectedAt = now.toISOString();\n}\n\nconst slugHint = `${slugify(top.title)}-${datePart}`.slice(0, 96);\nconst sourceUrls = [];\nfor (const s of sources.slice(0, 5)) {\n  if (s.hnUrl && !sourceUrls.includes(s.hnUrl)) sourceUrls.push(s.hnUrl);\n  if (s.url && s.url !== s.hnUrl && !sourceUrls.includes(s.url)) sourceUrls.push(s.url);\n}\n\nconst sourceText = sources.map((s, i) => `${i+1}. ${s.title}\\nOriginal URL: ${s.url}\\nHN discussion: ${s.hnUrl}\\nHN source page: ${s.sourcePage}\\nRoute: ${s.route}; rank: ${s.rank}; points: ${s.points}; comments: ${s.comments}; created: ${s.createdAt || ''}\\nAI/business relevance terms found: ${s.aiHits.length ? s.aiHits.join(', ') : 'none'}`).join('\\n\\n');\n\nconst leadInstruction = sources.some(s => s.aiScore > 0)\n  ? 'At least one current Hacker News signal is AI, LLM, automation, devtool, creative-technology, search, or workflow related. Lead with the strongest AI/business-automation angle while staying faithful to the source titles.'\n  : 'The current Hacker News page has few explicit AI stories. Lead with the strongest software, product, founder, infrastructure, or web-business lesson and connect it responsibly to automation and digital operations without pretending the source is about AI.';\n\nconst articlePrompt = `You are writing for Huygen Studios, an AI automation and digital experience studio at ${siteUrl}.\n\nCreate a news-inspired but evergreen business analysis article using the latest Hacker News source signals below.\n\nHN source page fetched: ${hnSourcePage}\nHN source strategy: ${decision.hnStrategy || 'auto'}\nDuplicate HN stories skipped this run: ${duplicateSkipped}\n\nIMPORTANT SOURCE AND COPYRIGHT RULES:\n- Use the HN posts only for discovery, angle selection, and attribution.\n- Do not copy source text.\n- Do not paraphrase full articles.\n- Do not summarize each source one-by-one.\n- Do not invent facts beyond the provided source titles, URLs, HN rank, points, and comments.\n- Create original Huygen Studios analysis, frameworks, implementation lessons, and business implications.\n\nSources:\n${sourceText}\n\nArticle angle:\n${leadInstruction}\nConnect the signal to practical AI automation, AI voice agents, CRM workflows, WhatsApp automation, cinematic websites, AI search, software operations, or creative production systems where relevant.\n\nRules:\nSTRICT WORD COUNT SYSTEM INSTRUCTION:\\n- The articleHtml body MUST contain at least MIN_WORD_COUNT words after all HTML tags are removed.\\n- MIN_WORD_COUNT is the hard floor from the workflow environment, normally 800.\\n- Aim for 950 to 1300 words so the article cannot accidentally fall below the hard floor.\\n- Before returning JSON, mentally count the article words. If it is below the hard floor, add useful H2/H3 sections, examples, implementation notes, source context, FAQs, or checklists until it is above the hard floor.\\n- Never return a short article. Never return fewer words than requested.\\n- Quality matters, but length compliance is mandatory.\n- Write 950 to 1300 words. Hard minimum: 800 words.\n- Output JSON only. No markdown fences.\n- Do not mention AdSense.\n- Use one H1 in articleHtml.\n- Use H2/H3 sections chosen naturally for the topic. Do not use a robotic template.\n- The article must feel current, but it should remain useful after the HN post is no longer new.\n- Include practical steps, implementation guidance, common mistakes, business implications, and a short FAQ or checklist only if it genuinely helps.\n- Include a short \"Source signals\" section near the end with links to the HN discussion URLs and original URLs.\n- Naturally include internal links to /services/ai-automation, /services/ai-voice-agents, /services/whatsapp-automation, /services/cinematic-websites, /services/gohighlevel-automation, /blog, and /contact where relevant.\n- Return articleHtml as safe semantic HTML using h1, h2, h3, p, ul, ol, li, strong, em, a. Do not include script/style/iframe.\n\nReturn exactly this JSON shape:\n{\n  \"title\": \"\",\n  \"slug\": \"${slugHint}\",\n  \"metaTitle\": \"\",\n  \"metaDescription\": \"\",\n  \"excerpt\": \"\",\n  \"cluster\": \"Hacker News AI and Technology Signals\",\n  \"primaryKeyword\": \"AI automation trends for businesses\",\n  \"sourceMode\": \"news\",\n  \"sourceUrls\": ${JSON.stringify(sourceUrls.slice(0, 10))},\n  \"articleHtml\": \"\"\n}`;\n\nreturn [{\n  json: {\n    siteUrl,\n    sourceMode: 'news',\n    sources,\n    topStory: top,\n    hnRoute,\n    hnSourcePage,\n    duplicateSkipped,\n    usedStoryMemoryCount: Array.isArray(staticData.hnUsedStoryIds) ? staticData.hnUsedStoryIds.length : 0,\n    baseSlug: slugHint,\n    articlePrompt,\n    scheduledAt: now.toISOString()\n  }\n}];\n"
+      },
+      "id": "07423e6f-8928-4668-b61a-8c45fdec6cb3",
+      "name": "Build News-Inspired Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -240,
+        -120
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const decision = $('Decide Content Mode').first().json;\nconst siteUrl = decision.siteUrl;\n\nconst topics = [\n  {cluster:'AI Automation', topic:'AI automation for small business lead follow-up', keyword:'AI automation for small business', intent:'commercial', service:'/services/ai-automation'},\n  {cluster:'AI Automation', topic:'What to automate first in a service business', keyword:'what to automate first in a small business', intent:'informational', service:'/services/ai-automation'},\n  {cluster:'AI Automation', topic:'AI automation workflow checklist for local businesses', keyword:'AI automation workflow checklist', intent:'informational', service:'/services/ai-automation'},\n  {cluster:'AI Automation', topic:'AI automation mistakes that break customer experience', keyword:'AI automation mistakes', intent:'informational', service:'/services/ai-automation'},\n  {cluster:'AI Automation', topic:'AI automation implementation roadmap for founders', keyword:'AI automation implementation roadmap', intent:'commercial', service:'/services/ai-automation'},\n  {cluster:'AI Voice Agents', topic:'AI voice agent missed call recovery workflow', keyword:'AI voice agent missed call recovery', intent:'commercial', service:'/services/ai-voice-agents'},\n  {cluster:'AI Voice Agents', topic:'AI receptionist versus human receptionist for appointment booking', keyword:'AI receptionist vs human receptionist', intent:'comparison', service:'/services/ai-voice-agents'},\n  {cluster:'AI Voice Agents', topic:'AI voice agent appointment booking script for service businesses', keyword:'AI voice agent appointment booking script', intent:'informational', service:'/services/ai-voice-agents'},\n  {cluster:'AI Voice Agents', topic:'How AI voice agents qualify inbound leads', keyword:'AI voice agent lead qualification', intent:'commercial', service:'/services/ai-voice-agents'},\n  {cluster:'AI Voice Agents', topic:'AI voice agents for home service companies', keyword:'AI voice agents for home services', intent:'commercial', service:'/services/ai-voice-agents'},\n  {cluster:'WhatsApp Automation', topic:'WhatsApp lead qualification flow for clinics and service businesses', keyword:'WhatsApp lead qualification flow', intent:'commercial', service:'/services/whatsapp-automation'},\n  {cluster:'WhatsApp Automation', topic:'WhatsApp automation for missed call follow-up', keyword:'WhatsApp automation missed call follow up', intent:'commercial', service:'/services/whatsapp-automation'},\n  {cluster:'WhatsApp Automation', topic:'WhatsApp CRM automation for local business sales teams', keyword:'WhatsApp CRM automation', intent:'commercial', service:'/services/whatsapp-automation'},\n  {cluster:'WhatsApp Automation', topic:'WhatsApp automation message templates for lead conversion', keyword:'WhatsApp automation templates', intent:'informational', service:'/services/whatsapp-automation'},\n  {cluster:'GoHighLevel Automation', topic:'GoHighLevel automation architecture for local businesses', keyword:'GoHighLevel automation architecture', intent:'commercial', service:'/services/gohighlevel-automation'},\n  {cluster:'GoHighLevel Automation', topic:'GoHighLevel pipeline design for appointment-based businesses', keyword:'GoHighLevel pipeline design', intent:'commercial', service:'/services/gohighlevel-automation'},\n  {cluster:'GoHighLevel Automation', topic:'GoHighLevel missed call text back workflow', keyword:'GoHighLevel missed call text back', intent:'commercial', service:'/services/gohighlevel-automation'},\n  {cluster:'CRM Workflows', topic:'CRM pipeline stages for local service businesses', keyword:'CRM pipeline stages for service business', intent:'informational', service:'/services/ai-automation'},\n  {cluster:'CRM Workflows', topic:'Lead scoring workflow for service businesses using AI', keyword:'AI lead scoring workflow', intent:'commercial', service:'/services/ai-automation'},\n  {cluster:'CRM Workflows', topic:'How to design CRM follow-up sequences that convert', keyword:'CRM follow up sequences', intent:'informational', service:'/services/ai-automation'},\n  {cluster:'Cinematic Websites', topic:'Cinematic website conversion framework for premium brands', keyword:'cinematic website conversion framework', intent:'commercial', service:'/services/cinematic-websites'},\n  {cluster:'Cinematic Websites', topic:'Website redesign checklist for service businesses', keyword:'website redesign checklist for service business', intent:'informational', service:'/services/cinematic-websites'},\n  {cluster:'Cinematic Websites', topic:'How motion design affects website conversion without hurting speed', keyword:'motion design website conversion', intent:'informational', service:'/services/cinematic-websites'},\n  {cluster:'Cinematic Websites', topic:'Cinematic websites versus traditional business websites', keyword:'cinematic website vs traditional website', intent:'comparison', service:'/services/cinematic-websites'},\n  {cluster:'SEO and AI Search', topic:'SEO for AI search on business websites', keyword:'SEO for AI search', intent:'informational', service:'/services/cinematic-websites'},\n  {cluster:'SEO and AI Search', topic:'How service businesses should structure pages for AI search engines', keyword:'AI search optimization for service business', intent:'informational', service:'/services/cinematic-websites'},\n  {cluster:'Creative AI', topic:'Creative AI workflow for social content production', keyword:'creative AI workflow', intent:'informational', service:'/services/ai-automation'},\n  {cluster:'Creative AI', topic:'AI tools for creative production teams without losing brand quality', keyword:'AI tools for creative production', intent:'commercial', service:'/services/ai-automation'},\n  {cluster:'Automation Strategy', topic:'Automation agency tech stack for small business systems', keyword:'automation agency tech stack', intent:'informational', service:'/services/ai-automation'},\n  {cluster:'Automation Strategy', topic:'How to calculate ROI before building an automation workflow', keyword:'automation ROI calculation', intent:'commercial', service:'/services/ai-automation'},\n  {cluster:'Automation Strategy', topic:'How to document business processes before automating them', keyword:'document business processes before automation', intent:'informational', service:'/services/ai-automation'},\n  {cluster:'Industry Use Cases', topic:'AI automation for real estate lead follow-up', keyword:'AI automation for real estate leads', intent:'commercial', service:'/services/ai-automation'},\n  {cluster:'Industry Use Cases', topic:'AI voice agents for dental clinics', keyword:'AI voice agents for dental clinics', intent:'commercial', service:'/services/ai-voice-agents'},\n  {cluster:'Industry Use Cases', topic:'WhatsApp automation for gyms and fitness studios', keyword:'WhatsApp automation for gyms', intent:'commercial', service:'/services/whatsapp-automation'},\n  {cluster:'Industry Use Cases', topic:'AI automation for law firm intake workflows', keyword:'AI automation for law firms', intent:'commercial', service:'/services/ai-automation'},\n  {cluster:'Industry Use Cases', topic:'AI automation for med spa lead conversion', keyword:'AI automation for med spas', intent:'commercial', service:'/services/ai-automation'},\n  {cluster:'Sales Automation', topic:'Speed to lead automation for local service companies', keyword:'speed to lead automation', intent:'commercial', service:'/services/ai-automation'},\n  {cluster:'Sales Automation', topic:'How to build an automated sales follow-up system', keyword:'automated sales follow up system', intent:'informational', service:'/services/ai-automation'},\n  {cluster:'Sales Automation', topic:'How AI agents can reduce no-shows for appointments', keyword:'AI agents reduce no shows', intent:'commercial', service:'/services/ai-voice-agents'},\n  {cluster:'Technical Explainers', topic:'How AI agents connect to CRMs, calendars, and messaging tools', keyword:'AI agent CRM calendar integration', intent:'informational', service:'/services/ai-automation'},\n  {cluster:'Technical Explainers', topic:'Webhook automation explained for business owners', keyword:'webhook automation explained', intent:'informational', service:'/services/ai-automation'},\n  {cluster:'Technical Explainers', topic:'How to design safe handoff rules for AI agents', keyword:'AI agent human handoff rules', intent:'informational', service:'/services/ai-automation'}\n];\n\nfunction slugify(s) {\n  return String(s).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 80);\n}\n\nconst topicalLenses = [\n  'agentic AI workflows moving from demos into production operations',\n  'AI search and answer-engine visibility for service businesses',\n  'CRM-connected AI agents that qualify, route, and follow up with leads',\n  'voice agents and WhatsApp automation as front-office infrastructure',\n  'human handoff, safety rules, and observability for business automations',\n  'creative AI systems for websites, content operations, and premium digital experiences',\n  'workflow automation that connects forms, calendars, CRMs, messaging, and reporting',\n  'practical AI implementation choices founders should make before buying more software'\n];\n\nconst now = new Date();\nconst day = Math.floor(now.getTime() / 86400000);\n// one evergreen SEO post/day. Move through the cluster list deterministically.\nconst index = day % topics.length;\nconst selected = topics[index];\nconst topicalLens = topicalLenses[day % topicalLenses.length];\nconst baseSlug = slugify(selected.topic);\nconst minWords = $env.MIN_WORD_COUNT || '800';\n\nconst articlePrompt = `You are the senior SEO strategist and technical content architect for Huygen Studios, an AI automation and digital experience studio at ${siteUrl}.\n\nCreate a production-ready evergreen SEO article for this topic:\nTopic: ${selected.topic}\nPrimary keyword: ${selected.keyword}\nCluster: ${selected.cluster}\nSearch intent: ${selected.intent}\nRelevant service page: ${selected.service}\nTopical AI lens to weave in naturally: ${topicalLens}\n\nSEO STRATEGY:\n- Satisfy the real search intent first. Do not write a generic template article.\n- Use the primary keyword naturally in the title, intro, at least one heading where appropriate, meta fields, and body.\n- Add semantically related terms, but avoid keyword stuffing.\n- Write for founders, operators, local service businesses, creative teams, and teams considering AI automation.\n- Make the article feel current by discussing modern AI agents, AI search, voice agents, WhatsApp automation, CRM workflows, no-code/low-code automation, handoff rules, measurement, and implementation risk where relevant.\n- Do not claim breaking news, current market data, statistics, or named product changes unless they are general knowledge inside the prompt. This SEO mode has no external news source.\n- Prefer specific implementation thinking over broad inspirational writing.\n\nCONTENT QUALITY RULES:\nSTRICT WORD COUNT SYSTEM INSTRUCTION:\\n- The articleHtml body MUST contain at least ${minWords} words after all HTML tags are removed.\\n- Aim for 1000 to 1450 words so the article cannot accidentally fall below the hard floor.\\n- Before returning JSON, mentally count the article words. If it is below ${minWords} words, add useful H2/H3 sections, examples, implementation notes, FAQs, or checklists until it is above the hard floor.\\n- Never return a short article. Never return fewer words than requested.\\n- Quality matters, but length compliance is mandatory.\n- Output JSON only. No markdown fences.\n- Create original, practical analysis. Do not invent statistics, fake clients, fake results, awards, or fake case studies.\n- Do not mention AdSense.\n- Use exactly one H1 in articleHtml.\n- Use H2/H3 sections, but choose the structure based on the topic instead of forcing the same outline every time.\n- Include actionable implementation steps, decision criteria, common mistakes, and practical business implications.\n- Include a short FAQ section only if it improves search usefulness for this topic.\n- Use short paragraphs and concrete language. Avoid filler, hype, and vague phrases like \"in today's digital landscape\".\n- Naturally include internal links to ${selected.service}, /services/ai-automation, /services/ai-voice-agents, /services/whatsapp-automation, /services/cinematic-websites, /services/gohighlevel-automation, /blog, and /contact where relevant.\n- The article should sound premium, technical, commercial, and useful — like a studio that actually implements automations, not like a generic SEO blog.\n- Return articleHtml as safe semantic HTML using h1, h2, h3, p, ul, ol, li, strong, em, a. Do not include script/style/iframe.\n\nReturn exactly this JSON shape:\n{\n  \"title\": \"\",\n  \"slug\": \"${baseSlug}\",\n  \"metaTitle\": \"\",\n  \"metaDescription\": \"\",\n  \"excerpt\": \"\",\n  \"cluster\": \"${selected.cluster}\",\n  \"primaryKeyword\": \"${selected.keyword}\",\n  \"sourceMode\": \"seo\",\n  \"sourceUrls\": [],\n  \"articleHtml\": \"\"\n}`;\n\nreturn [{ json: { siteUrl, sourceMode:'seo', selected, topicalLens, baseSlug, articlePrompt, scheduledAt: now.toISOString() } }];\n"
+      },
+      "id": "8a579b49-89bb-4fb2-a53c-ee2266371479",
+      "name": "Build SEO Cluster Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -240,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://generativelanguage.googleapis.com/v1beta/interactions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-goog-api-key",
+              "value": "={{$env.GEMINI_API_KEY}}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { model: $env.GEMINI_ARTICLE_MODEL || $env.GEMINI_MODEL || 'gemini-3.1-flash-lite', input: $json.articlePrompt, generation_config: { temperature: $json.sourceMode === 'news' ? 0.72 : 0.82, thinking_level: 'low' } } }}",
+        "options": {
+          "timeout": 120000
+        }
+      },
+      "id": "668352ef-2ef6-48e0-bdaa-a6b07c14e0c9",
+      "name": "Gemini Generate Article",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        40,
+        20
+      ],
+      "notes": "High-availability Gemini call. Defaults to gemini-3.1-flash-lite to avoid gemini-3.5-flash high-demand spikes. Retries up to 4 times.\nRetry policy: retries up to 4 times with 15s between attempts.",
+      "retryOnFail": true,
+      "maxTries": 4,
+      "waitBetweenTries": 15000
+    },
+    {
+      "parameters": {
+        "jsCode": "function extractGeminiText(input) {\n  // Supports both legacy generateContent responses and newer Interactions API responses.\n  if (typeof input?.output_text === 'string' && input.output_text.trim()) return input.output_text.trim();\n  if (typeof input?.outputText === 'string' && input.outputText.trim()) return input.outputText.trim();\n  if (typeof input?.text === 'string' && input.text.trim()) return input.text.trim();\n\n  const legacyParts = input?.candidates?.[0]?.content?.parts || [];\n  const legacyText = legacyParts.map(p => p.text || '').join('\\n').trim();\n  if (legacyText) return legacyText;\n\n  const out = [];\n  function walk(value) {\n    if (!value) return;\n    if (Array.isArray(value)) {\n      for (const item of value) walk(item);\n      return;\n    }\n    if (typeof value !== 'object') return;\n    for (const key of ['output_text', 'outputText', 'text']) {\n      if (typeof value[key] === 'string' && value[key].trim()) out.push(value[key].trim());\n    }\n    for (const key of ['content', 'parts', 'output', 'outputs', 'response', 'responses', 'steps', 'messages']) {\n      if (value[key]) walk(value[key]);\n    }\n  }\n  walk(input);\n  return [...new Set(out)].join('\\n').trim();\n}\n\nfunction parseJsonText(text) {\n  let raw = String(text || '').trim();\n  raw = raw.replace(/^```json\\s*/i, '').replace(/^```\\s*/i, '').replace(/```$/i, '').trim();\n  const first = raw.indexOf('{');\n  const last = raw.lastIndexOf('}');\n  if (first >= 0 && last > first) raw = raw.slice(first, last + 1);\n  return JSON.parse(raw);\n}\nfunction stripDangerousHtml(html) {\n  return String(html || '')\n    .replace(/<script[\\s\\S]*?<\\/script>/gi, '')\n    .replace(/<style[\\s\\S]*?<\\/style>/gi, '')\n    .replace(/<iframe[\\s\\S]*?<\\/iframe>/gi, '')\n    .replace(/\\son[a-z]+\\s*=\\s*\"[^\"]*\"/gi, '')\n    .replace(/\\son[a-z]+\\s*=\\s*'[^']*'/gi, '')\n    .replace(/javascript:/gi, '');\n}\nfunction hasSourceLinks(html, urls) {\n  if (!Array.isArray(urls) || urls.length === 0) return true;\n  const h = String(html || '');\n  return urls.some(u => u && h.includes(u));\n}\n\n\nfunction countWordsFromHtml(html) {\n  const plain = String(html || '').replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\\s+/g, ' ').trim();\n  return plain ? plain.split(' ').filter(Boolean).length : 0;\n}\n\nfunction ensureMinimumArticleLength(html, draft, minWords) {\n  let out = String(html || '');\n  const title = String(draft.title || 'this automation system');\n  const cluster = String(draft.cluster || 'AI automation');\n  const keyword = String(draft.primaryKeyword || 'business automation');\n  const serviceLink = cluster.toLowerCase().includes('voice') ? '/services/ai-voice-agents'\n    : cluster.toLowerCase().includes('whatsapp') ? '/services/whatsapp-automation'\n    : cluster.toLowerCase().includes('website') || cluster.toLowerCase().includes('cinematic') ? '/services/cinematic-websites'\n    : '/services/ai-automation';\n\n  const blocks = [\n    `<h2>Implementation Checklist</h2><p>For Huygen Studios, the practical value of ${keyword} comes from turning the idea into a reliable operating workflow, not from publishing a concept that only looks good on paper. A useful implementation starts with the customer journey, then maps each manual handoff, delay, data field, and follow-up task that affects conversion. From there, the team can decide which steps should be automated, which steps should stay human-led, and which exceptions need clear escalation rules.</p><ul><li>Define the exact business outcome before choosing tools.</li><li>Map the current process from first contact to closed opportunity.</li><li>Connect the workflow to CRM, calendar, messaging, and reporting systems.</li><li>Test edge cases before exposing the automation to real prospects.</li><li>Review transcripts, form submissions, and conversion data every week.</li></ul>`,\n    `<h2>Operational Rollout Plan</h2><p>A strong rollout should begin with a narrow version of the workflow. Instead of automating every customer interaction at once, start with one high-friction moment such as missed-call recovery, lead qualification, appointment booking, quote requests, or post-consultation follow-up. This keeps risk low while still proving whether the system improves speed, consistency, and customer experience. Once that first workflow is stable, the same structure can expand into additional channels such as WhatsApp, email, website forms, voice agents, and internal task routing.</p><p>This is also where <a href=\"${serviceLink}\">Huygen Studios service implementation</a> becomes important: the system needs clean prompts, dependable integrations, fallback handling, and a front-end experience that makes the automation feel intentional rather than bolted on.</p>`,\n    `<h2>Common Mistakes to Avoid</h2><p>The most common mistake is treating automation as a replacement for strategy. A weak process becomes worse when it is automated, because the business starts repeating bad logic faster. Another mistake is failing to define human handoff rules. If an AI agent, website flow, or CRM sequence cannot handle a request, the user should never feel trapped. Clear escalation paths protect the brand and improve trust.</p><p>Teams should also avoid launching without measurement. At minimum, track response time, booking rate, qualified lead rate, failed conversations, handoff reasons, and the number of manual tasks removed from the workflow. Those metrics show whether ${title} is creating operational leverage or just adding another layer of software.</p>`,\n    `<h2>How Huygen Studios Approaches This</h2><p>Huygen Studios approaches ${cluster} as a connected delivery system: strategy, interface, automation logic, creative direction, and technical implementation need to work together. The goal is not to add random AI features. The goal is to build a system where the website, CRM, messaging tools, and automation layer all support the same commercial outcome. That is why every workflow should include clear user intent, clean data capture, practical fallback states, and a path to speak with the business when automation is not enough.</p><p>Businesses that want to explore this can start with the relevant service page, review related articles on the <a href=\"/blog\">Huygen Studios blog</a>, or <a href=\"/contact\">contact Huygen Studios</a> to discuss a production-ready workflow.</p>`\n  ];\n\n  let i = 0;\n  while (countWordsFromHtml(out) < minWords && i < blocks.length) {\n    out += blocks[i++];\n  }\n  return out;\n}\n\nconst input = $input.first().json;\nconst text = extractGeminiText(input);\nif (!text) throw new Error('Gemini draft response contained no text.');\nconst draft = parseJsonText(text);\n\nif (!draft.title || !draft.slug || !draft.articleHtml) {\n  throw new Error('Gemini draft JSON is missing title, slug, or articleHtml.');\n}\n\ndraft.articleHtml = stripDangerousHtml(draft.articleHtml);\nconst minWords = parseInt($env.MIN_WORD_COUNT || '800', 10) || 800;\n// Hard guarantee: if Gemini returns a draft below MIN_WORD_COUNT, extend it deterministically\n// before the quality gate sees it. This prevents missed posts caused only by short output.\ndraft.articleHtml = ensureMinimumArticleLength(draft.articleHtml, draft, minWords);\nconst wordCount = countWordsFromHtml(draft.articleHtml);\nconst sourceMode = draft.sourceMode || 'seo';\nconst requiresSourceAttribution = sourceMode === 'news';\nconst hasSources = hasSourceLinks(draft.articleHtml, draft.sourceUrls || []);\n\nconst qualityPrompt = `Review this Huygen Studios article for automatic publishing. Return JSON only.\n\nPublishing thresholds:\n- Hard word floor only: accept the article when word_count >= MIN_WORD_COUNT. Do not enforce 1200 words. Do not reject 800–1100 word articles only because they are below a preferred target.\n- quality_score >= ${$env.MIN_QUALITY_SCORE || '85'}\n- originality_score >= ${$env.MIN_ORIGINALITY_SCORE || '85'}\n- word_count >= ${$env.MIN_WORD_COUNT || '800'}\n- no fake statistics\n- no fake clients\n- no fake case studies\n- includes practical steps\n- includes internal links\n- if sourceMode is news, includes source attribution links and does not copy sources\n\nSource mode: ${sourceMode}\nRequires source attribution: ${requiresSourceAttribution}\nSource URLs: ${JSON.stringify(draft.sourceUrls || [])}\nDetected source links in article: ${hasSources}\n\nArticle title: ${draft.title}\nArticle HTML:\n${draft.articleHtml}\n\nReturn exactly this JSON shape:\n{\n  \"approved\": true,\n  \"quality_score\": 0,\n  \"originality_score\": 0,\n  \"word_count\": 0,\n  \"has_fake_statistics\": false,\n  \"has_fake_clients\": false,\n  \"has_fake_case_studies\": false,\n  \"copies_source_too_closely\": false,\n  \"has_practical_steps\": true,\n  \"has_internal_links\": true,\n  \"has_source_attribution\": true,\n  \"problems\": [],\n  \"final_decision\": \"publish\"\n}`;\n\nreturn [{ json: { ...draft, wordCount, sourceMode, requiresSourceAttribution, hasSources, qualityPrompt } }];\n"
+      },
+      "id": "8f4b994a-e814-419e-9b83-5734cab10556",
+      "name": "Parse Gemini Draft",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        320,
+        20
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://generativelanguage.googleapis.com/v1beta/interactions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-goog-api-key",
+              "value": "={{$env.GEMINI_API_KEY}}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { model: $env.GEMINI_QUALITY_MODEL || $env.GEMINI_MODEL || 'gemini-3.1-flash-lite', input: $json.qualityPrompt, generation_config: { temperature: 0.1, thinking_level: 'minimal' } } }}",
+        "options": {
+          "timeout": 120000
+        }
+      },
+      "id": "06d7b069-7def-4c30-b32b-978dc4d56a9b",
+      "name": "Gemini Quality Gate",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        600,
+        20
+      ],
+      "notes": "High-availability Gemini quality gate. Uses GEMINI_QUALITY_MODEL or GEMINI_MODEL; default gemini-3.1-flash-lite. Retries transient demand errors.\nRetry policy: retries up to 4 times with 15s between attempts.",
+      "retryOnFail": true,
+      "maxTries": 4,
+      "waitBetweenTries": 15000
+    },
+    {
+      "parameters": {
+        "jsCode": "function extractGeminiText(input) {\n  // Supports both legacy generateContent responses and newer Interactions API responses.\n  if (typeof input?.output_text === 'string' && input.output_text.trim()) return input.output_text.trim();\n  if (typeof input?.outputText === 'string' && input.outputText.trim()) return input.outputText.trim();\n  if (typeof input?.text === 'string' && input.text.trim()) return input.text.trim();\n\n  const legacyParts = input?.candidates?.[0]?.content?.parts || [];\n  const legacyText = legacyParts.map(p => p.text || '').join('\\n').trim();\n  if (legacyText) return legacyText;\n\n  const out = [];\n  function walk(value) {\n    if (!value) return;\n    if (Array.isArray(value)) {\n      for (const item of value) walk(item);\n      return;\n    }\n    if (typeof value !== 'object') return;\n    for (const key of ['output_text', 'outputText', 'text']) {\n      if (typeof value[key] === 'string' && value[key].trim()) out.push(value[key].trim());\n    }\n    for (const key of ['content', 'parts', 'output', 'outputs', 'response', 'responses', 'steps', 'messages']) {\n      if (value[key]) walk(value[key]);\n    }\n  }\n  walk(input);\n  return [...new Set(out)].join('\\n').trim();\n}\n\nfunction parseJsonText(text) {\n  let raw = String(text || '').trim();\n  raw = raw.replace(/^```json\\s*/i, '').replace(/^```\\s*/i, '').replace(/```$/i, '').trim();\n  const first = raw.indexOf('{');\n  const last = raw.lastIndexOf('}');\n  if (first >= 0 && last > first) raw = raw.slice(first, last + 1);\n  return JSON.parse(raw);\n}\nfunction envBool(name, fallback) {\n  const v = $env[name];\n  if (v === undefined || v === null || String(v).trim() === '') return fallback;\n  return ['1','true','yes','on'].includes(String(v).trim().toLowerCase());\n}\nfunction envInt(name, fallback) {\n  const n = parseInt($env[name] || '', 10);\n  return Number.isFinite(n) ? n : fallback;\n}\nfunction slugify(s) { return String(s).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 96); }\nfunction stripHtmlText(html) {\n  return String(html || '')\n    .replace(/<script[\\s\\S]*?<\\/script>/gi, ' ')\n    .replace(/<style[\\s\\S]*?<\\/style>/gi, ' ')\n    .replace(/<[^>]+>/g, ' ')\n    .replace(/&nbsp;/gi, ' ')\n    .replace(/&amp;/gi, '&')\n    .replace(/&quot;/gi, '\"')\n    .replace(/&#39;/gi, \"'\")\n    .replace(/\\s+/g, ' ')\n    .trim();\n}\nfunction unwrapImageValue(value) {\n  if (!value) return '';\n  if (typeof value === 'string') return value;\n  if (typeof value === 'object') return value.url || value.src || value.href || '';\n  return '';\n}\nfunction normalizeHttpUrl(value, baseUrl) {\n  const raw = String(unwrapImageValue(value) || '').trim();\n  if (!raw) return '';\n  try {\n    const parsed = new URL(raw, baseUrl || undefined);\n    if (!['http:', 'https:'].includes(parsed.protocol)) return '';\n    return parsed.toString();\n  } catch (e) {\n    return '';\n  }\n}\nfunction renderCoverTemplate(template, values, baseUrl) {\n  let rendered = String(template || '').trim();\n  if (!rendered) return '';\n  for (const [key, value] of Object.entries(values || {})) {\n    rendered = rendered.split(`{${key}}`).join(encodeURIComponent(String(value || '')));\n  }\n  return normalizeHttpUrl(rendered, baseUrl);\n}\nfunction resolveCoverImage(draft, slug, siteUrl) {\n  const candidates = [\n    ['draft.coverImage', draft.coverImage],\n    ['draft.coverImageUrl', draft.coverImageUrl],\n    ['MARBLE_DEFAULT_COVER_IMAGE_URL', $env.MARBLE_DEFAULT_COVER_IMAGE_URL],\n    ['BLOG_DEFAULT_COVER_IMAGE_URL', $env.BLOG_DEFAULT_COVER_IMAGE_URL]\n  ];\n  for (const [source, value] of candidates) {\n    const valid = normalizeHttpUrl(value, siteUrl);\n    if (valid) return { coverImage: valid, coverImageSource: source };\n  }\n  const templated = renderCoverTemplate(\n    $env.MARBLE_COVER_IMAGE_URL_TEMPLATE,\n    { slug, title: draft.title || '', mode: draft.sourceMode || 'seo' },\n    siteUrl\n  );\n  if (templated) return { coverImage: templated, coverImageSource: 'MARBLE_COVER_IMAGE_URL_TEMPLATE' };\n  return { coverImage: '', coverImageSource: 'omitted-safe-no-valid-url' };\n}\n\nconst qualityRaw = extractGeminiText($input.first().json);\nif (!qualityRaw) throw new Error('Gemini quality response contained no text.');\nconst quality = parseJsonText(qualityRaw);\n\nconst draft = $('Parse Gemini Draft').first().json;\nconst minQuality = envInt('MIN_QUALITY_SCORE', 85);\nconst minOriginality = envInt('MIN_ORIGINALITY_SCORE', 85);\nconst minWords = envInt('MIN_WORD_COUNT', 800);\nconst autoPublish = envBool('AUTO_PUBLISH_ENABLED', false);\nconst marbleApiKey = ($env.MARBLE_API_KEY || '').trim();\nconst marbleKeyLooksPublic = marbleApiKey.startsWith('mpk_');\nconst marbleKeyLooksPrivate = marbleApiKey.startsWith('msk_');\nconst marbleKeyMissing = !marbleApiKey;\n\nconst sourceAttributionOk = draft.sourceMode !== 'news' || (quality.has_source_attribution === true && draft.hasSources === true);\nconst qualityProblems = Array.isArray(quality.problems) ? quality.problems.map(String) : [];\n// If the only problem is that the model wanted a larger target length, do not block the post.\n// The real publish floor is MIN_WORD_COUNT. This prevents missing good 900–1100 word posts.\nconst blockingProblems = qualityProblems.filter(p => !/word count|word_count|below.*threshold|required threshold|target length|1200|1400/i.test(p));\nconst objectivePass = Boolean(\n  Number(quality.quality_score || 0) >= minQuality &&\n  Number(quality.originality_score || 0) >= minOriginality &&\n  Number(quality.word_count || draft.wordCount || 0) >= minWords &&\n  quality.has_fake_statistics === false &&\n  quality.has_fake_clients === false &&\n  quality.has_fake_case_studies === false &&\n  quality.copies_source_too_closely !== true &&\n  quality.has_practical_steps === true &&\n  quality.has_internal_links === true &&\n  sourceAttributionOk &&\n  blockingProblems.length === 0\n);\nconst approved = objectivePass;\n\nconst categoryId = ($env.MARBLE_CATEGORY_ID || 'cmrds2w4y000009j7e37o136k').trim();\nconst authorId = ($env.MARBLE_AUTHOR_ID || '').trim();\nconst tagIds = ($env.MARBLE_TAG_IDS || '').split(',').map(s => s.trim()).filter(Boolean);\n\nconst siteUrl = String($env.NEXT_PUBLIC_SITE_URL || 'https://www.huygenstudios.com').replace(/\\/$/, '');\nlet slug = slugify(draft.slug || draft.title);\nif (!slug) slug = `post-${new Date().toISOString().replace(/[^0-9]/g, '').slice(0, 14)}`;\nif (draft.sourceMode === 'news' && !/\\d{4}-\\d{2}-\\d{2}$/.test(slug)) {\n  slug = `${slug}-${new Date().toISOString().slice(0,10)}`.slice(0, 96);\n}\n\nconst description = String(draft.metaDescription || draft.excerpt || '').trim()\n  || stripHtmlText(draft.articleHtml).slice(0, 220)\n  || String(draft.title || 'Huygen Studios article');\nconst { coverImage, coverImageSource } = resolveCoverImage(draft, slug, siteUrl);\n\nconst marbleBody = {\n  title: String(draft.title || '').trim(),\n  content: String(draft.articleHtml || '').trim(),\n  description,\n  slug,\n  categoryId,\n  status: 'published',\n  featured: false,\n  publishedAt: new Date().toISOString()\n};\n// Never send coverImage:null. Marble accepts a URL or null, but omitting the field is\n// safer for frontends and lets the page-level fallback handle posts with no asset.\nif (coverImage) marbleBody.coverImage = coverImage;\nif (authorId) marbleBody.authors = [authorId];\nif (tagIds.length) marbleBody.tags = tagIds;\n\nlet status = approved ? (autoPublish ? 'ready_to_publish' : 'dry_run_passed') : 'quality_gate_failed';\nlet shouldPublish = approved && autoPublish;\nlet blockingReason = '';\n\n// Marble write operations require a private API key that starts with msk_.\n// Public mpk_ keys are read-only and cause Marble HTTP 403. Guard here so the\n// workflow returns a clear result instead of failing at the HTTP Request node.\nif (autoPublish && approved && (marbleKeyMissing || marbleKeyLooksPublic || !marbleKeyLooksPrivate)) {\n  shouldPublish = false;\n  status = 'marble_private_key_required';\n  blockingReason = marbleKeyMissing\n    ? 'MARBLE_API_KEY is missing.'\n    : marbleKeyLooksPublic\n      ? 'MARBLE_API_KEY starts with mpk_, which Marble treats as a public/read-only key. Use a private write key that starts with msk_.'\n      : 'MARBLE_API_KEY does not look like a Marble private write key. Use a private write key that starts with msk_.';\n}\n\nreturn [{\n  json: {\n    ...draft,\n    slug,\n    quality,\n    qualityProblems,\n    blockingProblems,\n    objectivePass,\n    approved,\n    autoPublish,\n    shouldPublish,\n    status,\n    blockingReason,\n    marbleKeyPrefix: marbleApiKey ? marbleApiKey.slice(0, 4) : '',\n    siteUrl,\n    publicPostPath: `/blog/${slug}`,\n    coverImage: coverImage || null,\n    coverImageSource,\n    marbleBody\n  }\n}];\n"
+      },
+      "id": "c36860bd-6733-4a2e-b979-7eb4268fae40",
+      "name": "Prepare Marble Payload",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        880,
+        20
+      ],
+      "notes": "Image-safe payload: only sends coverImage when a valid HTTP(S) URL exists. Optional envs: MARBLE_DEFAULT_COVER_IMAGE_URL, BLOG_DEFAULT_COVER_IMAGE_URL, MARBLE_COVER_IMAGE_URL_TEMPLATE."
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "should-publish",
+              "leftValue": "={{$json.shouldPublish}}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "cb0af010-b6c1-4e49-8eed-557c31922845",
+      "name": "Should Publish?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1160,
+        20
+      ]
+    },
+    {
+      "parameters": {
+        "method": "={{$json.marbleWriteMethod}}",
+        "url": "={{$json.marbleWriteUrl}}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{$env.MARBLE_API_KEY}}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{$json.marbleBody}}",
+        "options": {
+          "timeout": 120000,
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "id": "ab6247e6-3e1a-449f-9f9c-a5881cf38928",
+      "name": "Upsert to Marble",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2220,
+        -120
+      ],
+      "notes": "Idempotent Marble write. Uses POST for new slugs and PATCH for existing slugs. Returns all HTTP statuses so the workflow can recover from 409 collisions, 404 races, 429s, and 5xx errors."
+    },
+    {
+      "parameters": {
+        "url": "={{$('Prepare Post-Publish Verification').first().json.revalidateUrl}}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "User-Agent",
+              "value": "Mozilla/5.0 HuygenStudios-n8n-Publisher/8.0"
+            },
+            {
+              "name": "Cache-Control",
+              "value": "no-cache"
+            },
+            {
+              "name": "x-revalidate-secret",
+              "value": "={{$env.HUYGEN_REVALIDATE_SECRET || $env.REVALIDATE_SECRET || \"\"}}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 30000,
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true,
+              "responseFormat": "autodetect"
+            }
+          }
+        }
+      },
+      "id": "5ae3bd3a-0515-4975-b829-0f7e3578bb98",
+      "name": "Revalidate Website",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3780,
+        -240
+      ],
+      "notes": "Optional cache revalidation. The prepared URL includes slug, path, public URL, paths JSON, and optional secret. Failure does not falsely mark success; the public URL verification node is the source of truth."
+    },
+    {
+      "parameters": {
+        "jsCode": "const result = $input.first().json;\nreturn [{\n  json: {\n    status: 'published_verified',\n    sourceMode: result.sourceMode,\n    title: result.title,\n    slug: result.slug,\n    publicUrl: result.publicUrl,\n    sourceUrls: result.sourceUrls || [],\n    coverImage: result.coverImage || null,\n    coverImageSource: result.coverImageSource || 'omitted-safe-no-valid-url',\n    marbleWriteMethod: result.marbleWriteMethod,\n    marbleWriteStatusCode: result.marbleWriteStatusCode,\n    marblePost: result.marblePost,\n    publicStatusCode: result.publicStatusCode,\n    revalidationAttempted: result.revalidationAttempted,\n    revalidationStatusCode: result.revalidationStatusCode || null,\n    quality: result.quality,\n    publishedAt: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "c78626dc-0a83-42fa-a6f1-b13045ab8fcc",
+      "name": "Published Output",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4560,
+        -140
+      ],
+      "notes": "Final success is emitted only after Marble returns the post as published and the public /blog/[slug] URL responds successfully without known error-page markers."
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first().json;\nreturn [{\n  json: {\n    status: item.status || 'skipped',\n    reason: item.blockingReason || (item.autoPublish ? 'Quality gate did not pass.' : 'AUTO_PUBLISH_ENABLED=false. Dry run only.'),\n    sourceMode: item.sourceMode,\n    title: item.title,\n    slug: item.slug,\n    sourceUrls: item.sourceUrls || [],\n    approved: item.approved,\n    autoPublish: item.autoPublish,\n    quality: item.quality,\n    marbleKeyPrefix: item.marbleKeyPrefix,\n    checkedAt: new Date().toISOString()\n  }\n}];\n"
+      },
+      "id": "345f3447-b13d-4bf8-88e7-75fa83456a4d",
+      "name": "Dry Run or Skipped Output",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1440,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "needs-recovery-status",
+              "leftValue": "={{$json.status}}",
+              "rightValue": "quality_gate_failed",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            },
+            {
+              "id": "not-already-repair",
+              "leftValue": "={{$json.repairAttempt || false}}",
+              "rightValue": false,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "2abac923-0b8a-470d-84d8-b7e5441421e5",
+      "name": "Needs Recovery Retry?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1160,
+        150
+      ],
+      "notes": "If quality gate fails on the first draft, generate one recovery/repair draft before skipping."
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first().json;\nconst originalTitle = item.title || 'Huygen Studios article';\nconst sourceMode = item.sourceMode || 'seo';\nconst sourceUrls = item.sourceUrls || [];\nconst problems = item.blockingProblems?.length ? item.blockingProblems : (item.quality?.problems || []);\nconst minWords = $env.MIN_WORD_COUNT || '800';\nconst siteUrl = $env.NEXT_PUBLIC_SITE_URL || 'https://www.huygenstudios.com';\n\nconst sourceSection = sourceUrls.length\n  ? `Use these source URLs for attribution only. Do not copy them:\\n${sourceUrls.map((u, i) => `${i+1}. ${u}`).join('\\n')}`\n  : 'No external source URLs are required for this SEO article.';\n\nconst modeSpecificRules = sourceMode === 'news'\n  ? `- This is a Hacker News latest-signal article. Keep it current, but make the business lesson evergreen.\\n- Mention Hacker News only as source attribution, not as the whole article.\\n- Include a compact Source signals section with the exact source URLs.\\n- If the original angle felt repetitive, use a different business angle from the same source list: implementation risk, founder decision-making, AI workflow design, product operations, creative production, AI search, or customer communication.`\n  : `- This is an evergreen SEO article. Make it more specific, technical, and AI-business focused.\\n- Weave in modern AI automation, AI agents, AI search, voice agents, WhatsApp automation, CRM workflows, GoHighLevel, human handoff rules, measurement, and implementation risk where relevant.\\n- Do not claim breaking news or current statistics because SEO mode has no external source feed.\\n- Avoid a generic SEO-template structure; choose headings based on search intent.`;\n\nconst articlePrompt = `You are repairing an article draft for Huygen Studios because the first draft failed the automated quality gate.\n\nOriginal title:\n${originalTitle}\n\nFailure reasons:\n${JSON.stringify(problems, null, 2)}\n\nSource mode: ${sourceMode}\n${sourceSection}\n\nRewrite the article as a COMPLETE new publish-ready article.\n\nRules:\nSTRICT WORD COUNT SYSTEM INSTRUCTION:\n- The articleHtml body MUST contain at least ${minWords} words after all HTML tags are removed.\n- Aim for 1000 to 1450 words so the article cannot accidentally fall below the hard floor.\n- Before returning JSON, mentally count the article words. If it is below ${minWords} words, add useful H2/H3 sections, examples, implementation notes, FAQs, source context, or checklists until it is above ${minWords} words.\n- Never return a short article. Never return fewer words than requested.\n- Quality matters, but length compliance is mandatory.\n- Output JSON only. No markdown fences.\n- Do not invent statistics, clients, results, awards, or case studies.\n- Do not mention AdSense.\n- Use one H1 in articleHtml.\n- Use H2/H3 sections.\n- Include practical steps, implementation notes, common mistakes, business implications, and a conclusion.\n${modeSpecificRules}\n- Include natural internal links to relevant Huygen pages:\n  /services/ai-automation\n  /services/ai-voice-agents\n  /services/whatsapp-automation\n  /services/cinematic-websites\n  /services/gohighlevel-automation\n  /blog\n  /contact\n- Make it specific, useful, premium, technical, and non-generic.\n- Return articleHtml as safe semantic HTML using h1, h2, h3, p, ul, ol, li, strong, em, a. Do not include script/style/iframe.\n\nReturn exactly this JSON shape:\n{\n  \"title\": \"\",\n  \"slug\": \"\",\n  \"metaTitle\": \"\",\n  \"metaDescription\": \"\",\n  \"excerpt\": \"\",\n  \"cluster\": \"\",\n  \"primaryKeyword\": \"\",\n  \"sourceMode\": \"${sourceMode}\",\n  \"sourceUrls\": ${JSON.stringify(sourceUrls)},\n  \"articleHtml\": \"\"\n}`;\n\nreturn [{ json: { ...item, repairAttempt: true, articlePrompt, siteUrl } }];"
+      },
+      "id": "3292c80f-eee9-47aa-8776-b8346571bec5",
+      "name": "Build Recovery Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1400,
+        210
+      ],
+      "notes": "Creates a stricter regeneration prompt when the first article is rejected by quality gate."
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://generativelanguage.googleapis.com/v1beta/interactions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-goog-api-key",
+              "value": "={{$env.GEMINI_API_KEY}}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { model: $env.GEMINI_ARTICLE_MODEL || $env.GEMINI_MODEL || 'gemini-3.1-flash-lite', input: $json.articlePrompt, generation_config: { temperature: $json.sourceMode === 'news' ? 0.68 : 0.78, thinking_level: 'low' } } }}",
+        "options": {
+          "timeout": 120000
+        }
+      },
+      "id": "4fb49ec8-e504-4e89-861e-9078521e5db1",
+      "name": "Gemini Generate Recovery Article",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1660,
+        210
+      ],
+      "notes": "Recovery article generation. Retries transient Gemini capacity/API errors.",
+      "retryOnFail": true,
+      "maxTries": 4,
+      "waitBetweenTries": 15000
+    },
+    {
+      "parameters": {
+        "jsCode": "function extractGeminiText(input) {\n  // Supports both legacy generateContent responses and newer Interactions API responses.\n  if (typeof input?.output_text === 'string' && input.output_text.trim()) return input.output_text.trim();\n  if (typeof input?.outputText === 'string' && input.outputText.trim()) return input.outputText.trim();\n  if (typeof input?.text === 'string' && input.text.trim()) return input.text.trim();\n\n  const legacyParts = input?.candidates?.[0]?.content?.parts || [];\n  const legacyText = legacyParts.map(p => p.text || '').join('\\n').trim();\n  if (legacyText) return legacyText;\n\n  const out = [];\n  function walk(value) {\n    if (!value) return;\n    if (Array.isArray(value)) {\n      for (const item of value) walk(item);\n      return;\n    }\n    if (typeof value !== 'object') return;\n    for (const key of ['output_text', 'outputText', 'text']) {\n      if (typeof value[key] === 'string' && value[key].trim()) out.push(value[key].trim());\n    }\n    for (const key of ['content', 'parts', 'output', 'outputs', 'response', 'responses', 'steps', 'messages']) {\n      if (value[key]) walk(value[key]);\n    }\n  }\n  walk(input);\n  return [...new Set(out)].join('\\n').trim();\n}\n\nfunction parseJsonText(text) {\n  let raw = String(text || '').trim();\n  raw = raw.replace(/^```json\\s*/i, '').replace(/^```\\s*/i, '').replace(/```$/i, '').trim();\n  const first = raw.indexOf('{');\n  const last = raw.lastIndexOf('}');\n  if (first >= 0 && last > first) raw = raw.slice(first, last + 1);\n  return JSON.parse(raw);\n}\nfunction stripDangerousHtml(html) {\n  return String(html || '')\n    .replace(/<script[\\s\\S]*?<\\/script>/gi, '')\n    .replace(/<style[\\s\\S]*?<\\/style>/gi, '')\n    .replace(/<iframe[\\s\\S]*?<\\/iframe>/gi, '')\n    .replace(/\\son[a-z]+\\s*=\\s*\"[^\"]*\"/gi, '')\n    .replace(/\\son[a-z]+\\s*=\\s*'[^']*'/gi, '')\n    .replace(/javascript:/gi, '');\n}\nfunction hasSourceLinks(html, urls) {\n  if (!Array.isArray(urls) || urls.length === 0) return true;\n  const h = String(html || '');\n  return urls.some(u => u && h.includes(u));\n}\n\n\nfunction countWordsFromHtml(html) {\n  const plain = String(html || '').replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\\s+/g, ' ').trim();\n  return plain ? plain.split(' ').filter(Boolean).length : 0;\n}\n\nfunction ensureMinimumArticleLength(html, draft, minWords) {\n  let out = String(html || '');\n  const title = String(draft.title || 'this automation system');\n  const cluster = String(draft.cluster || 'AI automation');\n  const keyword = String(draft.primaryKeyword || 'business automation');\n  const serviceLink = cluster.toLowerCase().includes('voice') ? '/services/ai-voice-agents'\n    : cluster.toLowerCase().includes('whatsapp') ? '/services/whatsapp-automation'\n    : cluster.toLowerCase().includes('website') || cluster.toLowerCase().includes('cinematic') ? '/services/cinematic-websites'\n    : '/services/ai-automation';\n\n  const blocks = [\n    `<h2>Implementation Checklist</h2><p>For Huygen Studios, the practical value of ${keyword} comes from turning the idea into a reliable operating workflow, not from publishing a concept that only looks good on paper. A useful implementation starts with the customer journey, then maps each manual handoff, delay, data field, and follow-up task that affects conversion. From there, the team can decide which steps should be automated, which steps should stay human-led, and which exceptions need clear escalation rules.</p><ul><li>Define the exact business outcome before choosing tools.</li><li>Map the current process from first contact to closed opportunity.</li><li>Connect the workflow to CRM, calendar, messaging, and reporting systems.</li><li>Test edge cases before exposing the automation to real prospects.</li><li>Review transcripts, form submissions, and conversion data every week.</li></ul>`,\n    `<h2>Operational Rollout Plan</h2><p>A strong rollout should begin with a narrow version of the workflow. Instead of automating every customer interaction at once, start with one high-friction moment such as missed-call recovery, lead qualification, appointment booking, quote requests, or post-consultation follow-up. This keeps risk low while still proving whether the system improves speed, consistency, and customer experience. Once that first workflow is stable, the same structure can expand into additional channels such as WhatsApp, email, website forms, voice agents, and internal task routing.</p><p>This is also where <a href=\"${serviceLink}\">Huygen Studios service implementation</a> becomes important: the system needs clean prompts, dependable integrations, fallback handling, and a front-end experience that makes the automation feel intentional rather than bolted on.</p>`,\n    `<h2>Common Mistakes to Avoid</h2><p>The most common mistake is treating automation as a replacement for strategy. A weak process becomes worse when it is automated, because the business starts repeating bad logic faster. Another mistake is failing to define human handoff rules. If an AI agent, website flow, or CRM sequence cannot handle a request, the user should never feel trapped. Clear escalation paths protect the brand and improve trust.</p><p>Teams should also avoid launching without measurement. At minimum, track response time, booking rate, qualified lead rate, failed conversations, handoff reasons, and the number of manual tasks removed from the workflow. Those metrics show whether ${title} is creating operational leverage or just adding another layer of software.</p>`,\n    `<h2>How Huygen Studios Approaches This</h2><p>Huygen Studios approaches ${cluster} as a connected delivery system: strategy, interface, automation logic, creative direction, and technical implementation need to work together. The goal is not to add random AI features. The goal is to build a system where the website, CRM, messaging tools, and automation layer all support the same commercial outcome. That is why every workflow should include clear user intent, clean data capture, practical fallback states, and a path to speak with the business when automation is not enough.</p><p>Businesses that want to explore this can start with the relevant service page, review related articles on the <a href=\"/blog\">Huygen Studios blog</a>, or <a href=\"/contact\">contact Huygen Studios</a> to discuss a production-ready workflow.</p>`\n  ];\n\n  let i = 0;\n  while (countWordsFromHtml(out) < minWords && i < blocks.length) {\n    out += blocks[i++];\n  }\n  return out;\n}\n\nconst input = $input.first().json;\nconst text = extractGeminiText(input);\nif (!text) throw new Error('Gemini draft response contained no text.');\nconst draft = parseJsonText(text);\n\nif (!draft.title || !draft.slug || !draft.articleHtml) {\n  throw new Error('Gemini draft JSON is missing title, slug, or articleHtml.');\n}\n\ndraft.articleHtml = stripDangerousHtml(draft.articleHtml);\nconst minWords = parseInt($env.MIN_WORD_COUNT || '800', 10) || 800;\n// Hard guarantee: if Gemini returns a draft below MIN_WORD_COUNT, extend it deterministically\n// before the quality gate sees it. This prevents missed posts caused only by short output.\ndraft.articleHtml = ensureMinimumArticleLength(draft.articleHtml, draft, minWords);\nconst wordCount = countWordsFromHtml(draft.articleHtml);\nconst sourceMode = draft.sourceMode || 'seo';\nconst requiresSourceAttribution = sourceMode === 'news';\nconst hasSources = hasSourceLinks(draft.articleHtml, draft.sourceUrls || []);\n\nconst qualityPrompt = `Review this Huygen Studios article for automatic publishing. Return JSON only.\n\nPublishing thresholds:\n- Hard word floor only: accept the article when word_count >= MIN_WORD_COUNT. Do not enforce 1200 words. Do not reject 800–1100 word articles only because they are below a preferred target.\n- quality_score >= ${$env.MIN_QUALITY_SCORE || '85'}\n- originality_score >= ${$env.MIN_ORIGINALITY_SCORE || '85'}\n- word_count >= ${$env.MIN_WORD_COUNT || '800'}\n- no fake statistics\n- no fake clients\n- no fake case studies\n- includes practical steps\n- includes internal links\n- if sourceMode is news, includes source attribution links and does not copy sources\n\nSource mode: ${sourceMode}\nRequires source attribution: ${requiresSourceAttribution}\nSource URLs: ${JSON.stringify(draft.sourceUrls || [])}\nDetected source links in article: ${hasSources}\n\nArticle title: ${draft.title}\nArticle HTML:\n${draft.articleHtml}\n\nReturn exactly this JSON shape:\n{\n  \"approved\": true,\n  \"quality_score\": 0,\n  \"originality_score\": 0,\n  \"word_count\": 0,\n  \"has_fake_statistics\": false,\n  \"has_fake_clients\": false,\n  \"has_fake_case_studies\": false,\n  \"copies_source_too_closely\": false,\n  \"has_practical_steps\": true,\n  \"has_internal_links\": true,\n  \"has_source_attribution\": true,\n  \"problems\": [],\n  \"final_decision\": \"publish\"\n}`;\n\nreturn [{ json: { ...draft, wordCount, sourceMode, requiresSourceAttribution, hasSources, repairAttempt: true, qualityPrompt } }];\n"
+      },
+      "id": "326d38df-8cac-4cdf-9358-7d1007bda994",
+      "name": "Parse Gemini Recovery Draft",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1940,
+        210
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://generativelanguage.googleapis.com/v1beta/interactions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-goog-api-key",
+              "value": "={{$env.GEMINI_API_KEY}}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { model: $env.GEMINI_QUALITY_MODEL || $env.GEMINI_MODEL || 'gemini-3.1-flash-lite', input: $json.qualityPrompt, generation_config: { temperature: 0.1, thinking_level: 'minimal' } } }}",
+        "options": {
+          "timeout": 120000
+        }
+      },
+      "id": "4f6a08dc-d184-4a2d-aa54-e065baa7e1f1",
+      "name": "Gemini Quality Gate Recovery",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2220,
+        210
+      ],
+      "notes": "Quality gate for the recovery draft. Retries transient Gemini capacity/API errors.",
+      "retryOnFail": true,
+      "maxTries": 4,
+      "waitBetweenTries": 15000
+    },
+    {
+      "parameters": {
+        "jsCode": "function extractGeminiText(input) {\n  // Supports both legacy generateContent responses and newer Interactions API responses.\n  if (typeof input?.output_text === 'string' && input.output_text.trim()) return input.output_text.trim();\n  if (typeof input?.outputText === 'string' && input.outputText.trim()) return input.outputText.trim();\n  if (typeof input?.text === 'string' && input.text.trim()) return input.text.trim();\n\n  const legacyParts = input?.candidates?.[0]?.content?.parts || [];\n  const legacyText = legacyParts.map(p => p.text || '').join('\\n').trim();\n  if (legacyText) return legacyText;\n\n  const out = [];\n  function walk(value) {\n    if (!value) return;\n    if (Array.isArray(value)) {\n      for (const item of value) walk(item);\n      return;\n    }\n    if (typeof value !== 'object') return;\n    for (const key of ['output_text', 'outputText', 'text']) {\n      if (typeof value[key] === 'string' && value[key].trim()) out.push(value[key].trim());\n    }\n    for (const key of ['content', 'parts', 'output', 'outputs', 'response', 'responses', 'steps', 'messages']) {\n      if (value[key]) walk(value[key]);\n    }\n  }\n  walk(input);\n  return [...new Set(out)].join('\\n').trim();\n}\n\nfunction parseJsonText(text) {\n  let raw = String(text || '').trim();\n  raw = raw.replace(/^```json\\s*/i, '').replace(/^```\\s*/i, '').replace(/```$/i, '').trim();\n  const first = raw.indexOf('{');\n  const last = raw.lastIndexOf('}');\n  if (first >= 0 && last > first) raw = raw.slice(first, last + 1);\n  return JSON.parse(raw);\n}\nfunction envBool(name, fallback) {\n  const v = $env[name];\n  if (v === undefined || v === null || String(v).trim() === '') return fallback;\n  return ['1','true','yes','on'].includes(String(v).trim().toLowerCase());\n}\nfunction envInt(name, fallback) {\n  const n = parseInt($env[name] || '', 10);\n  return Number.isFinite(n) ? n : fallback;\n}\nfunction slugify(s) { return String(s).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 96); }\nfunction stripHtmlText(html) {\n  return String(html || '')\n    .replace(/<script[\\s\\S]*?<\\/script>/gi, ' ')\n    .replace(/<style[\\s\\S]*?<\\/style>/gi, ' ')\n    .replace(/<[^>]+>/g, ' ')\n    .replace(/&nbsp;/gi, ' ')\n    .replace(/&amp;/gi, '&')\n    .replace(/&quot;/gi, '\"')\n    .replace(/&#39;/gi, \"'\")\n    .replace(/\\s+/g, ' ')\n    .trim();\n}\nfunction unwrapImageValue(value) {\n  if (!value) return '';\n  if (typeof value === 'string') return value;\n  if (typeof value === 'object') return value.url || value.src || value.href || '';\n  return '';\n}\nfunction normalizeHttpUrl(value, baseUrl) {\n  const raw = String(unwrapImageValue(value) || '').trim();\n  if (!raw) return '';\n  try {\n    const parsed = new URL(raw, baseUrl || undefined);\n    if (!['http:', 'https:'].includes(parsed.protocol)) return '';\n    return parsed.toString();\n  } catch (e) {\n    return '';\n  }\n}\nfunction renderCoverTemplate(template, values, baseUrl) {\n  let rendered = String(template || '').trim();\n  if (!rendered) return '';\n  for (const [key, value] of Object.entries(values || {})) {\n    rendered = rendered.split(`{${key}}`).join(encodeURIComponent(String(value || '')));\n  }\n  return normalizeHttpUrl(rendered, baseUrl);\n}\nfunction resolveCoverImage(draft, slug, siteUrl) {\n  const candidates = [\n    ['draft.coverImage', draft.coverImage],\n    ['draft.coverImageUrl', draft.coverImageUrl],\n    ['MARBLE_DEFAULT_COVER_IMAGE_URL', $env.MARBLE_DEFAULT_COVER_IMAGE_URL],\n    ['BLOG_DEFAULT_COVER_IMAGE_URL', $env.BLOG_DEFAULT_COVER_IMAGE_URL]\n  ];\n  for (const [source, value] of candidates) {\n    const valid = normalizeHttpUrl(value, siteUrl);\n    if (valid) return { coverImage: valid, coverImageSource: source };\n  }\n  const templated = renderCoverTemplate(\n    $env.MARBLE_COVER_IMAGE_URL_TEMPLATE,\n    { slug, title: draft.title || '', mode: draft.sourceMode || 'seo' },\n    siteUrl\n  );\n  if (templated) return { coverImage: templated, coverImageSource: 'MARBLE_COVER_IMAGE_URL_TEMPLATE' };\n  return { coverImage: '', coverImageSource: 'omitted-safe-no-valid-url' };\n}\n\nconst qualityRaw = extractGeminiText($input.first().json);\nif (!qualityRaw) throw new Error('Gemini quality response contained no text.');\nconst quality = parseJsonText(qualityRaw);\n\nconst draft = $('Parse Gemini Recovery Draft').first().json;\nconst minQuality = envInt('MIN_QUALITY_SCORE', 85);\nconst minOriginality = envInt('MIN_ORIGINALITY_SCORE', 85);\nconst minWords = envInt('MIN_WORD_COUNT', 800);\nconst autoPublish = envBool('AUTO_PUBLISH_ENABLED', false);\nconst marbleApiKey = ($env.MARBLE_API_KEY || '').trim();\nconst marbleKeyLooksPublic = marbleApiKey.startsWith('mpk_');\nconst marbleKeyLooksPrivate = marbleApiKey.startsWith('msk_');\nconst marbleKeyMissing = !marbleApiKey;\n\nconst sourceAttributionOk = draft.sourceMode !== 'news' || (quality.has_source_attribution === true && draft.hasSources === true);\nconst qualityProblems = Array.isArray(quality.problems) ? quality.problems.map(String) : [];\n// If the only problem is that the model wanted a larger target length, do not block the post.\n// The real publish floor is MIN_WORD_COUNT. This prevents missing good 900–1100 word posts.\nconst blockingProblems = qualityProblems.filter(p => !/word count|word_count|below.*threshold|required threshold|target length|1200|1400/i.test(p));\nconst objectivePass = Boolean(\n  Number(quality.quality_score || 0) >= minQuality &&\n  Number(quality.originality_score || 0) >= minOriginality &&\n  Number(quality.word_count || draft.wordCount || 0) >= minWords &&\n  quality.has_fake_statistics === false &&\n  quality.has_fake_clients === false &&\n  quality.has_fake_case_studies === false &&\n  quality.copies_source_too_closely !== true &&\n  quality.has_practical_steps === true &&\n  quality.has_internal_links === true &&\n  sourceAttributionOk &&\n  blockingProblems.length === 0\n);\nconst approved = objectivePass;\n\nconst categoryId = ($env.MARBLE_CATEGORY_ID || 'cmrds2w4y000009j7e37o136k').trim();\nconst authorId = ($env.MARBLE_AUTHOR_ID || '').trim();\nconst tagIds = ($env.MARBLE_TAG_IDS || '').split(',').map(s => s.trim()).filter(Boolean);\n\nconst siteUrl = String($env.NEXT_PUBLIC_SITE_URL || 'https://www.huygenstudios.com').replace(/\\/$/, '');\nlet slug = slugify(draft.slug || draft.title);\nif (!slug) slug = `post-${new Date().toISOString().replace(/[^0-9]/g, '').slice(0, 14)}`;\nif (draft.sourceMode === 'news' && !/\\d{4}-\\d{2}-\\d{2}$/.test(slug)) {\n  slug = `${slug}-${new Date().toISOString().slice(0,10)}`.slice(0, 96);\n}\n\nconst description = String(draft.metaDescription || draft.excerpt || '').trim()\n  || stripHtmlText(draft.articleHtml).slice(0, 220)\n  || String(draft.title || 'Huygen Studios article');\nconst { coverImage, coverImageSource } = resolveCoverImage(draft, slug, siteUrl);\n\nconst marbleBody = {\n  title: String(draft.title || '').trim(),\n  content: String(draft.articleHtml || '').trim(),\n  description,\n  slug,\n  categoryId,\n  status: 'published',\n  featured: false,\n  publishedAt: new Date().toISOString()\n};\n// Never send coverImage:null. Marble accepts a URL or null, but omitting the field is\n// safer for frontends and lets the page-level fallback handle posts with no asset.\nif (coverImage) marbleBody.coverImage = coverImage;\nif (authorId) marbleBody.authors = [authorId];\nif (tagIds.length) marbleBody.tags = tagIds;\n\nlet status = approved ? (autoPublish ? 'ready_to_publish' : 'dry_run_passed') : 'quality_gate_failed';\nlet shouldPublish = approved && autoPublish;\nlet blockingReason = '';\n\n// Marble write operations require a private API key that starts with msk_.\n// Public mpk_ keys are read-only and cause Marble HTTP 403. Guard here so the\n// workflow returns a clear result instead of failing at the HTTP Request node.\nif (autoPublish && approved && (marbleKeyMissing || marbleKeyLooksPublic || !marbleKeyLooksPrivate)) {\n  shouldPublish = false;\n  status = 'marble_private_key_required';\n  blockingReason = marbleKeyMissing\n    ? 'MARBLE_API_KEY is missing.'\n    : marbleKeyLooksPublic\n      ? 'MARBLE_API_KEY starts with mpk_, which Marble treats as a public/read-only key. Use a private write key that starts with msk_.'\n      : 'MARBLE_API_KEY does not look like a Marble private write key. Use a private write key that starts with msk_.';\n}\n\nreturn [{\n  json: {\n    ...draft,\n    repairAttempt: true,\n    slug,\n    quality,\n    qualityProblems,\n    blockingProblems,\n    objectivePass,\n    approved,\n    autoPublish,\n    shouldPublish,\n    status,\n    blockingReason,\n    marbleKeyPrefix: marbleApiKey ? marbleApiKey.slice(0, 4) : '',\n    siteUrl,\n    publicPostPath: `/blog/${slug}`,\n    coverImage: coverImage || null,\n    coverImageSource,\n    marbleBody\n  }\n}];\n"
+      },
+      "id": "1eac88cc-069f-4907-93ec-40c3d33371fb",
+      "name": "Prepare Marble Payload Recovery",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2500,
+        210
+      ],
+      "notes": "Prepares Marble payload after the recovery draft quality gate.\nImage-safe payload: only sends coverImage when a valid HTTP(S) URL exists. Optional envs: MARBLE_DEFAULT_COVER_IMAGE_URL, BLOG_DEFAULT_COVER_IMAGE_URL, MARBLE_COVER_IMAGE_URL_TEMPLATE."
+    },
+    {
+      "parameters": {
+        "url": "=https://api.marblecms.com/v1/posts/{{encodeURIComponent($json.slug)}}?status=all&format=html",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{$env.MARBLE_API_KEY}}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 45000,
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "id": "87e20c0e-74df-46cd-8840-37758d4d8a8e",
+      "name": "Check Existing Marble Post",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1440,
+        -120
+      ],
+      "notes": "Preflight slug lookup. A 200 becomes PATCH, a 404 becomes POST. Other statuses are rejected with a clear error."
+    },
+    {
+      "parameters": {
+        "jsCode": "const prepared = $('Should Publish?').first().json;\nconst response = $input.first().json || {};\nconst statusCode = Number(response.statusCode || response.status || 0);\nconst body = response.body && typeof response.body === 'object' ? response.body : response;\nconst existingPost = body?.post && typeof body.post === 'object' ? body.post : null;\nconst slug = String(prepared.slug || '').trim();\nif (!slug) throw new Error('Cannot publish: prepared slug is empty.');\n\nlet marbleWriteMethod;\nlet marbleWriteUrl;\nlet marbleUpsertMode;\nif (statusCode === 200 && existingPost) {\n  marbleWriteMethod = 'PATCH';\n  marbleWriteUrl = `https://api.marblecms.com/v1/posts/${encodeURIComponent(existingPost.id || existingPost.slug || slug)}`;\n  marbleUpsertMode = 'update-existing';\n} else if (statusCode === 404) {\n  marbleWriteMethod = 'POST';\n  marbleWriteUrl = 'https://api.marblecms.com/v1/posts';\n  marbleUpsertMode = 'create-new';\n} else {\n  throw new Error(`Marble slug preflight failed with HTTP ${statusCode || 'unknown'}: ${JSON.stringify(body).slice(0, 1000)}`);\n}\n\nreturn [{ json: {\n  ...prepared,\n  existingMarblePost: existingPost,\n  marblePreflightStatusCode: statusCode,\n  marbleWriteMethod,\n  marbleWriteUrl,\n  marbleUpsertMode,\n  writeAttempt: 0,\n  maxWriteAttempts: Math.max(1, parseInt($env.MARBLE_WRITE_MAX_ATTEMPTS || '4', 10) || 4)\n} }];"
+      },
+      "id": "9fb1a2a3-1bd3-4f5b-8f7f-a638a26bf4e5",
+      "name": "Prepare Marble Upsert",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1700,
+        -120
+      ],
+      "notes": "Builds an idempotent create-or-update request from the slug preflight result."
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first().json;\nreturn [{ json: { ...item, writeAttempt: Number(item.writeAttempt || 0) + 1 } }];"
+      },
+      "id": "cfb32f07-88f8-4eb7-8c3a-ab90a98a9b86",
+      "name": "Prepare Marble Write Attempt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1960,
+        -120
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const request = $('Prepare Marble Write Attempt').item.json;\nconst response = $input.first().json || {};\nconst statusCode = Number(response.statusCode || response.status || 0);\nconst body = response.body !== undefined ? response.body : response;\nconst attempt = Number(request.writeAttempt || 1);\nconst maxAttempts = Number(request.maxWriteAttempts || 4);\nconst method = String(request.marbleWriteMethod || 'POST').toUpperCase();\nconst slugUrl = `https://api.marblecms.com/v1/posts/${encodeURIComponent(request.slug)}`;\n\nif (statusCode >= 200 && statusCode < 300) {\n  return [{ json: {\n    ...request,\n    retryMarbleWrite: false,\n    marbleWriteSucceeded: true,\n    marbleWriteStatusCode: statusCode,\n    marbleWriteResponse: body\n  } }];\n}\n\n// A POST can race with another run or time out after Marble actually created the post.\n// Convert a slug collision into a PATCH so the run becomes idempotent instead of failing.\nif (statusCode === 409 && method === 'POST' && attempt < maxAttempts) {\n  return [{ json: {\n    ...request,\n    marbleWriteMethod: 'PATCH',\n    marbleWriteUrl: slugUrl,\n    marbleUpsertMode: 'recover-409-with-update',\n    retryMarbleWrite: true,\n    marbleWriteSucceeded: false,\n    marbleWriteStatusCode: statusCode,\n    marbleWriteResponse: body\n  } }];\n}\n\n// If the post vanished between preflight and PATCH, retry once as a create.\nif (statusCode === 404 && method === 'PATCH' && attempt < maxAttempts) {\n  return [{ json: {\n    ...request,\n    marbleWriteMethod: 'POST',\n    marbleWriteUrl: 'https://api.marblecms.com/v1/posts',\n    marbleUpsertMode: 'recover-404-with-create',\n    retryMarbleWrite: true,\n    marbleWriteSucceeded: false,\n    marbleWriteStatusCode: statusCode,\n    marbleWriteResponse: body\n  } }];\n}\n\nconst transient = [408, 425, 429].includes(statusCode) || statusCode >= 500 || statusCode === 0;\nif (transient && attempt < maxAttempts) {\n  return [{ json: {\n    ...request,\n    retryMarbleWrite: true,\n    marbleWriteSucceeded: false,\n    marbleWriteStatusCode: statusCode,\n    marbleWriteResponse: body\n  } }];\n}\n\nthrow new Error(`Marble ${method} failed after ${attempt}/${maxAttempts} attempts with HTTP ${statusCode || 'unknown'}: ${JSON.stringify(body).slice(0, 1400)}`);"
+      },
+      "id": "e99eac16-f4ba-4281-9015-bbc24a6f1496",
+      "name": "Evaluate Marble Write",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2480,
+        -120
+      ],
+      "notes": "Recovers from duplicate-slug 409s, PATCH/POST races, throttling, and transient Marble 5xx responses."
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "retry-marble-write",
+              "leftValue": "={{$json.retryMarbleWrite}}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "b24c425c-75f1-4328-8d1a-2f2e8f37c513",
+      "name": "Retry Marble Write?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2740,
+        -120
+      ]
+    },
+    {
+      "parameters": {
+        "resume": "timeInterval",
+        "amount": 15,
+        "unit": "seconds"
+      },
+      "id": "b90ca1cb-c68e-449d-b1a4-bd8fdf25b5c8",
+      "name": "Wait Before Marble Retry",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        2740,
+        20
+      ],
+      "webhookId": "8483a920-b307-406a-b2aa-1657249f1774",
+      "notes": "Backoff before retrying transient Marble write errors."
+    },
+    {
+      "parameters": {
+        "url": "=https://api.marblecms.com/v1/posts/{{encodeURIComponent($json.slug)}}?status=published&format=html",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{$env.MARBLE_API_KEY}}"
+            },
+            {
+              "name": "Cache-Control",
+              "value": "no-cache"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 45000,
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "id": "7f80276a-d2ab-4e3d-b45a-133b3e1386d3",
+      "name": "Verify Marble Published Post",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3000,
+        -160
+      ],
+      "retryOnFail": true,
+      "maxTries": 6,
+      "waitBetweenTries": 5000,
+      "notes": "Read-after-write verification. Retries until Marble exposes the slug with status=published, preventing a premature website revalidation that can cache a 404."
+    },
+    {
+      "parameters": {
+        "jsCode": "function addQueryParams(rawUrl, params) {\n  const base = String(rawUrl || '').trim();\n  if (!base) return '';\n  let url;\n  try { url = new URL(base); }\n  catch (e) { throw new Error(`HUYGEN_REVALIDATE_URL is not a valid absolute URL: ${base}`); }\n  for (const [key, value] of Object.entries(params)) {\n    if (value !== undefined && value !== null && String(value) !== '') url.searchParams.set(key, String(value));\n  }\n  return url.toString();\n}\n\nconst prepared = $('Prepare Marble Upsert').first().json;\nconst writeResult = $('Evaluate Marble Write').last().json;\nconst response = $input.first().json || {};\nconst statusCode = Number(response.statusCode || response.status || 0);\nconst body = response.body && typeof response.body === 'object' ? response.body : response;\nconst post = body?.post;\nif (statusCode < 200 || statusCode >= 300 || !post) {\n  throw new Error(`Marble read-after-write verification failed with HTTP ${statusCode || 'unknown'}: ${JSON.stringify(body).slice(0, 1200)}`);\n}\nif (String(post.status || '').toLowerCase() !== 'published') {\n  throw new Error(`Marble returned post ${post.slug || prepared.slug}, but status is ${post.status || 'unknown'} instead of published.`);\n}\n\nconst slug = String(post.slug || prepared.slug).trim();\nconst siteUrl = String(prepared.siteUrl || $env.NEXT_PUBLIC_SITE_URL || 'https://www.huygenstudios.com').replace(/\\/$/, '');\nconst publicPath = `/blog/${slug}`;\nconst publicUrl = `${siteUrl}${publicPath}`;\nconst secret = String($env.HUYGEN_REVALIDATE_SECRET || $env.REVALIDATE_SECRET || '').trim();\nconst revalidateUrl = addQueryParams($env.HUYGEN_REVALIDATE_URL, {\n  slug,\n  path: publicPath,\n  url: publicUrl,\n  paths: JSON.stringify(['/blog', publicPath]),\n  secret\n});\nconst separator = publicUrl.includes('?') ? '&' : '?';\nconst publicVerificationUrl = `${publicUrl}${separator}__n8n_publish_check=${Date.now()}`;\n\nreturn [{ json: {\n  ...prepared,\n  slug,\n  publicPath,\n  publicUrl,\n  publicVerificationUrl,\n  hasRevalidateUrl: Boolean(revalidateUrl),\n  revalidateUrl,\n  marbleWriteMethod: writeResult.marbleWriteMethod,\n  marbleWriteStatusCode: writeResult.marbleWriteStatusCode,\n  marbleWriteResponse: writeResult.marbleWriteResponse,\n  marblePost: post,\n  marbleVerificationStatusCode: statusCode\n} }];"
+      },
+      "id": "ad75a453-22ba-489f-a080-1d4788d4c03c",
+      "name": "Prepare Post-Publish Verification",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3260,
+        -160
+      ],
+      "notes": "Uses the canonical slug returned by Marble, builds the public URL, and appends the detail and index paths to the optional revalidation endpoint."
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "has-revalidate-url",
+              "leftValue": "={{$json.hasRevalidateUrl}}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "cb32e050-abc5-4527-b954-7c38239a862f",
+      "name": "Has Revalidation URL?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        3520,
+        -160
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{$('Prepare Post-Publish Verification').first().json.publicVerificationUrl}}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "User-Agent",
+              "value": "Mozilla/5.0 HuygenStudios-n8n-Publisher/8.0"
+            },
+            {
+              "name": "Cache-Control",
+              "value": "no-cache, no-store, max-age=0"
+            },
+            {
+              "name": "Pragma",
+              "value": "no-cache"
+            },
+            {
+              "name": "Accept",
+              "value": "text/html,application/xhtml+xml"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 45000,
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "responseFormat": "text"
+            }
+          }
+        }
+      },
+      "id": "6ff5de85-6454-464f-83bc-1ada04456d82",
+      "name": "Verify Public Blog URL",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        4040,
+        -160
+      ],
+      "retryOnFail": true,
+      "maxTries": 8,
+      "waitBetweenTries": 10000,
+      "notes": "Retries the canonical /blog/[slug] page for up to roughly 80 seconds. A persistent 404/5xx fails the run instead of reporting a false publish success."
+    },
+    {
+      "parameters": {
+        "jsCode": "const prepared = $('Prepare Post-Publish Verification').first().json;\nlet revalidationAttempted = prepared.hasRevalidateUrl === true;\nlet revalidationStatusCode = null;\nif (revalidationAttempted) {\n  try {\n    const r = $('Revalidate Website').first().json || {};\n    revalidationStatusCode = Number(r.statusCode || r.status || 0) || null;\n  } catch (e) {}\n}\n\nconst response = $input.first().json || {};\nconst statusCode = Number(response.statusCode || response.status || 0);\nconst body = typeof response.body === 'string'\n  ? response.body\n  : (typeof response.data === 'string' ? response.data : JSON.stringify(response.body || response.data || response));\nconst lower = String(body || '').toLowerCase();\nconst knownErrorPage = [\n  'this page couldn’t load',\n  \"this page couldn't load\",\n  'a server error occurred',\n  'next-error-h1',\n  '>404</h1>',\n  'page not found</title>'\n].some(marker => lower.includes(marker));\n\nif (statusCode < 200 || statusCode >= 400) {\n  throw new Error(`Public blog verification returned HTTP ${statusCode || 'unknown'} for ${prepared.publicUrl}.`);\n}\nif (!body || body.length < 200) {\n  throw new Error(`Public blog verification returned an unexpectedly small response for ${prepared.publicUrl}.`);\n}\nif (knownErrorPage) {\n  throw new Error(`Public blog verification detected a rendered error page at ${prepared.publicUrl}.`);\n}\n\nreturn [{ json: {\n  ...prepared,\n  publicStatusCode: statusCode,\n  revalidationAttempted,\n  revalidationStatusCode,\n  publicPageVerified: true,\n  checkedAt: new Date().toISOString()\n} }];"
+      },
+      "id": "b12dec85-1133-4802-ad39-de38628bf633",
+      "name": "Assert Public Blog Page",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4300,
+        -160
+      ],
+      "notes": "Rejects soft-404 and generic server-error pages even if the host responds with HTTP 200."
+    },
+    {
+      "parameters": {
+        "content": "## v8.0 image + 404 safety\n\n**Required:** `MARBLE_API_KEY` (private `msk_...`), `MARBLE_CATEGORY_ID`, `NEXT_PUBLIC_SITE_URL`.\n\n**Optional cover image:** `MARBLE_DEFAULT_COVER_IMAGE_URL`, `BLOG_DEFAULT_COVER_IMAGE_URL`, or `MARBLE_COVER_IMAGE_URL_TEMPLATE` with `{slug}`, `{title}`, `{mode}`. Invalid/missing image URLs are omitted instead of sending `null`.\n\n**Optional revalidation:** `HUYGEN_REVALIDATE_URL` and `HUYGEN_REVALIDATE_SECRET`. The workflow verifies Marble first, then the public `/blog/[slug]` page.\n\n**Retry controls:** `MARBLE_WRITE_MAX_ATTEMPTS` (default 4).",
+        "height": 360,
+        "width": 520
+      },
+      "id": "3241b24b-a627-49dc-b930-1b465ec3be04",
+      "name": "v8.0 Setup Notes",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        3040,
+        100
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Twice Daily 09:00 SEO / 16:00 News Trigger": {
+      "main": [
+        [
+          {
+            "node": "Decide Content Mode",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Manual Test Trigger": {
+      "main": [
+        [
+          {
+            "node": "Decide Content Mode",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Decide Content Mode": {
+      "main": [
+        [
+          {
+            "node": "Is News Mode?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is News Mode?": {
+      "main": [
+        [
+          {
+            "node": "Fetch Hacker News Signals",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Build SEO Cluster Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Hacker News Signals": {
+      "main": [
+        [
+          {
+            "node": "Build News-Inspired Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build News-Inspired Prompt": {
+      "main": [
+        [
+          {
+            "node": "Gemini Generate Article",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build SEO Cluster Prompt": {
+      "main": [
+        [
+          {
+            "node": "Gemini Generate Article",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gemini Generate Article": {
+      "main": [
+        [
+          {
+            "node": "Parse Gemini Draft",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Gemini Draft": {
+      "main": [
+        [
+          {
+            "node": "Gemini Quality Gate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gemini Quality Gate": {
+      "main": [
+        [
+          {
+            "node": "Prepare Marble Payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Marble Payload": {
+      "main": [
+        [
+          {
+            "node": "Needs Recovery Retry?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Needs Recovery Retry?": {
+      "main": [
+        [
+          {
+            "node": "Build Recovery Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Should Publish?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Recovery Prompt": {
+      "main": [
+        [
+          {
+            "node": "Gemini Generate Recovery Article",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gemini Generate Recovery Article": {
+      "main": [
+        [
+          {
+            "node": "Parse Gemini Recovery Draft",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Gemini Recovery Draft": {
+      "main": [
+        [
+          {
+            "node": "Gemini Quality Gate Recovery",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gemini Quality Gate Recovery": {
+      "main": [
+        [
+          {
+            "node": "Prepare Marble Payload Recovery",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Marble Payload Recovery": {
+      "main": [
+        [
+          {
+            "node": "Should Publish?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Should Publish?": {
+      "main": [
+        [
+          {
+            "node": "Check Existing Marble Post",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Dry Run or Skipped Output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Existing Marble Post": {
+      "main": [
+        [
+          {
+            "node": "Prepare Marble Upsert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Marble Upsert": {
+      "main": [
+        [
+          {
+            "node": "Prepare Marble Write Attempt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Marble Write Attempt": {
+      "main": [
+        [
+          {
+            "node": "Upsert to Marble",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upsert to Marble": {
+      "main": [
+        [
+          {
+            "node": "Evaluate Marble Write",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Evaluate Marble Write": {
+      "main": [
+        [
+          {
+            "node": "Retry Marble Write?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Retry Marble Write?": {
+      "main": [
+        [
+          {
+            "node": "Wait Before Marble Retry",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Verify Marble Published Post",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait Before Marble Retry": {
+      "main": [
+        [
+          {
+            "node": "Prepare Marble Write Attempt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verify Marble Published Post": {
+      "main": [
+        [
+          {
+            "node": "Prepare Post-Publish Verification",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Post-Publish Verification": {
+      "main": [
+        [
+          {
+            "node": "Has Revalidation URL?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Revalidation URL?": {
+      "main": [
+        [
+          {
+            "node": "Revalidate Website",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Verify Public Blog URL",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Revalidate Website": {
+      "main": [
+        [
+          {
+            "node": "Verify Public Blog URL",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verify Public Blog URL": {
+      "main": [
+        [
+          {
+            "node": "Assert Public Blog Page",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Assert Public Blog Page": {
+      "main": [
+        [
+          {
+            "node": "Published Output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "3aa65ee4-6e5e-40c1-b877-e3e8750dedb4",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "enhancedBy": "ChatGPT workflow edit v8.0: optional safe cover images, idempotent Marble upsert, read-after-write verification, cache revalidation, and public 404/server-error verification"
+  },
+  "tags": []
+}

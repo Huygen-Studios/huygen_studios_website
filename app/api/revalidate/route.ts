@@ -13,37 +13,59 @@ function authenticate(req: NextRequest): boolean {
   return paramSecret === revalidateSecret || headerSecret === revalidateSecret;
 }
 
-function applyBlogRevalidation(rawSlug?: string | null) {
-  const slug = normalizeBlogSlug(rawSlug);
-  const paths = ["/blog", "/sitemap.xml"];
+function applyBlogRevalidation(slug: string | null, customPaths: string[] | null) {
+  const normalizedSlug = normalizeBlogSlug(slug);
+  const paths = customPaths && customPaths.length > 0 ? customPaths : ["/blog", "/sitemap.xml"];
   const tags = ["marble-posts"];
 
-  revalidatePath("/blog");
-  revalidatePath("/sitemap.xml");
+  // Revalidate tags
   revalidateTag("marble-posts", "max");
-
-  if (slug) {
-    const postPath = `/blog/${encodeBlogSlug(slug)}`;
-    revalidatePath(postPath);
-    revalidateTag(`marble-post:${slug}`, "max");
-    paths.push(postPath);
-    tags.push(`marble-post:${slug}`);
+  if (normalizedSlug) {
+    revalidateTag(`marble-post:${normalizedSlug}`, "max");
+    tags.push(`marble-post:${normalizedSlug}`);
   }
 
-  return { slug: slug || null, paths, tags };
+  // Revalidate paths
+  for (const path of paths) {
+    revalidatePath(path);
+  }
+
+  // Ensure targeted slug path is also explicitly revalidated
+  if (normalizedSlug) {
+    const postPath = `/blog/${encodeBlogSlug(normalizedSlug)}`;
+    if (!paths.includes(postPath)) {
+      revalidatePath(postPath);
+      paths.push(postPath);
+    }
+  }
+
+  return { slug: normalizedSlug || null, paths, tags };
 }
 
-async function readPostSlug(req: NextRequest): Promise<string | null> {
+async function readRevalidationParams(req: NextRequest): Promise<{ slug: string | null; paths: string[] | null }> {
   const { searchParams } = new URL(req.url);
-  const querySlug = searchParams.get("slug");
-  if (querySlug) return querySlug;
-
-  try {
-    const body = await req.json();
-    return body?.slug || body?.post?.slug || body?.data?.slug || body?.entry?.slug || null;
-  } catch {
-    return null;
+  const slug = searchParams.get("slug");
+  
+  let paths: string[] | null = null;
+  const queryPaths = searchParams.get("paths");
+  if (queryPaths) {
+    try {
+      const parsed = JSON.parse(queryPaths);
+      if (Array.isArray(parsed)) paths = parsed.map(String);
+    } catch {}
   }
+
+  if (req.method === "POST") {
+    try {
+      const body = await req.json();
+      return {
+        slug: slug || body?.slug || body?.post?.slug || body?.data?.slug || body?.entry?.slug || null,
+        paths: paths || (Array.isArray(body?.paths) ? body.paths.map(String) : null)
+      };
+    } catch {}
+  }
+
+  return { slug, paths };
 }
 
 function missingSecretResponse() {
@@ -65,7 +87,8 @@ export async function POST(req: NextRequest) {
     if (!process.env.MARBLE_REVALIDATE_SECRET) return missingSecretResponse();
     if (!authenticate(req)) return unauthorizedResponse();
 
-    const result = applyBlogRevalidation(await readPostSlug(req));
+    const { slug, paths } = await readRevalidationParams(req);
+    const result = applyBlogRevalidation(slug, paths);
 
     return NextResponse.json({
       revalidated: true,
@@ -89,7 +112,9 @@ export async function GET(req: NextRequest) {
     if (!process.env.MARBLE_REVALIDATE_SECRET) return missingSecretResponse();
     if (!authenticate(req)) return unauthorizedResponse();
 
-    const result = applyBlogRevalidation(await readPostSlug(req));
+    const { slug, paths } = await readRevalidationParams(req);
+    const result = applyBlogRevalidation(slug, paths);
+
     return NextResponse.json({
       revalidated: true,
       revalidatedSlug: result.slug,
