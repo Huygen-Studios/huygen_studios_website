@@ -207,7 +207,7 @@ export default async function BlogPostPage({ params }: PostPageProps) {
           </header>
 
           {/* Render Cover Image safely if present */}
-          {coverImage && (
+          {coverImage?.url && (
             <div className="max-w-[850px] mb-12 rounded-lg overflow-hidden border border-[rgba(255,255,255,0.1)] aspect-[16/9] relative">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
