@@ -6,6 +6,7 @@ const normalizeSource = readFileSync(new URL("../lib/blog/normalize.ts", import.
 const catalogSource = readFileSync(new URL("../components/blog/BlogCatalog.tsx", import.meta.url), "utf8");
 const routeSource = readFileSync(new URL("../app/blog/[slug]/page.tsx", import.meta.url), "utf8");
 const revalidateSource = readFileSync(new URL("../app/api/revalidate/route.ts", import.meta.url), "utf8");
+const marblePostsSource = readFileSync(new URL("../lib/marble/posts.ts", import.meta.url), "utf8");
 
 test("slug normalization decodes, trims, and removes wrapping slashes", () => {
   assert.match(normalizeSource, /decodeURIComponent\(slug\)/);
@@ -36,7 +37,9 @@ test("blog card hrefs use encoded canonical slugs", () => {
 
 test("newly published posts are not blocked by static params", () => {
   assert.match(routeSource, /export const dynamicParams = true/);
+  assert.match(routeSource, /export const revalidate = 300/);
   assert.doesNotMatch(routeSource, /dynamicParams = false/);
+  assert.doesNotMatch(routeSource, /generateStaticParams/);
 });
 
 test("detail route throws CMS errors instead of turning them into notFound", () => {
@@ -72,4 +75,12 @@ test("reduced motion keeps blog cards visible and links clickable", () => {
   assert.match(catalogSource, /gsap\.set\(cards, \{ opacity: 1/);
   assert.match(catalogSource, /className="blog-card group/);
   assert.doesNotMatch(catalogSource, /preventDefault\(/);
+});
+
+test("detail lookup uses the list source of truth with a fresh fallback before 404", () => {
+  assert.match(marblePostsSource, /getMarblePosts\(options: MarblePostsOptions = \{\}\)/);
+  assert.match(marblePostsSource, /cache: "no-store"/);
+  assert.match(marblePostsSource, /getFreshMarblePostByListLookup/);
+  assert.match(marblePostsSource, /const listedPost = await getMarblePostByListLookup\(slug\)/);
+  assert.match(marblePostsSource, /const freshListedPost = await getFreshMarblePostByListLookup\(slug\)/);
 });

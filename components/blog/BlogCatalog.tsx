@@ -1,39 +1,20 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import { useState, useMemo } from "react";
+import { useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { ArrowUpRight, Compass } from "lucide-react";
+import gsap from "gsap";
+import { useGSAP } from "@gsap/react";
+import { encodeBlogSlug } from "@/lib/blog/normalize";
 import { BlogPost } from "@/lib/blog/types";
 
-export function getCategoryName(category: any): string {
-  if (!category) return "AI Automation";
-  if (typeof category === "string") return category;
-  return category.name || category.slug || "AI Automation";
-}
+gsap.registerPlugin(useGSAP);
 
 interface BlogCatalogProps {
   posts: BlogPost[];
 }
 
-function getPostCoverImage(post: any): string | null {
-  if (!post) return null;
-  return (
-    (typeof post.coverImage === "string" ? post.coverImage : null) ||
-    post.coverImage?.url ||
-    post.coverImage?.src ||
-    post.featuredImage?.url ||
-    post.featuredImage?.src ||
-    post.image?.url ||
-    post.image?.src ||
-    post.cover?.url ||
-    post.cover?.src ||
-    null
-  );
-}
-
-// Visual category card gradients and styles
 const categoryStyleMap: Record<string, { color: string; border: string; glow: string }> = {
   "AI Automation": {
     color: "from-blue-600/20 to-indigo-900/30",
@@ -72,7 +53,6 @@ const categoryStyleMap: Record<string, { color: string; border: string; glow: st
   },
 };
 
-// CURATED STATIC CATEGORIES FOR HEADER STRIP
 const curatedCategories = [
   "All",
   "AI Automation",
@@ -84,33 +64,46 @@ const curatedCategories = [
 ];
 
 function makeThumbnailTitle(fullTitle: string): string {
-  const words = fullTitle.split(/\s+/).filter((w) => w.length > 2);
+  const words = fullTitle.split(/\s+/).filter((word) => word.length > 2);
   if (words.length <= 4) return fullTitle;
-  return words.slice(0, 4).join(" ") + "...";
+  return `${words.slice(0, 4).join(" ")}...`;
 }
 
-// COMPONENT: Visual image or designed text placeholder
+function formatPostDate(dateStr: string | null | undefined, month: "short" | "long" = "short") {
+  if (!dateStr) return "Recent";
+
+  try {
+    const date = new Date(dateStr);
+    if (!Number.isNaN(date.getTime())) {
+      return date.toLocaleDateString("en-US", { month, day: "numeric", year: "numeric" });
+    }
+  } catch {
+    return "Recent";
+  }
+
+  return "Recent";
+}
+
 function BlogVisual({ post, className = "aspect-[16/10]" }: { post: BlogPost; className?: string }) {
-  const imageUrl = getPostCoverImage(post);
+  const imageUrl = post.coverImage?.url || null;
   const title = post.title || "Untitled article";
-  const category = getCategoryName(post.category);
+  const category = post.category?.name || "AI Automation";
 
   if (imageUrl) {
     return (
-      <div className={`relative overflow-hidden rounded-2xl group border border-white/5 ${className}`}>
+      <div className={`blog-card-visual relative overflow-hidden rounded-2xl group border border-white/5 ${className}`}>
         <Image
           src={imageUrl}
-          alt={title}
+          alt={post.coverImage?.alt || title}
           fill
-          className="object-cover transition-transform duration-500 group-hover:scale-105"
+          className="blog-card-image object-cover"
           sizes="(max-width: 768px) 100vw, 33vw"
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+        <div className="blog-card-overlay absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0" />
       </div>
     );
   }
 
-  // Generate visual placeholder based on a simple name/length hash
   const hash = (title.length + category.length) % 5;
   const gradients = [
     "from-blue-950 via-indigo-950 to-black",
@@ -119,9 +112,6 @@ function BlogVisual({ post, className = "aspect-[16/10]" }: { post: BlogPost; cl
     "from-rose-950 via-purple-950 to-black",
     "from-violet-950 via-fuchsia-950 to-black",
   ];
-  const selectGradient = gradients[hash];
-
-  // Accent glow configuration
   const glows = [
     { bg1: "bg-cyan-500/10", bg2: "bg-purple-500/10" },
     { bg1: "bg-purple-500/10", bg2: "bg-pink-500/10" },
@@ -129,15 +119,11 @@ function BlogVisual({ post, className = "aspect-[16/10]" }: { post: BlogPost; cl
     { bg1: "bg-rose-500/10", bg2: "bg-violet-500/10" },
     { bg1: "bg-emerald-500/10", bg2: "bg-indigo-500/10" },
   ];
-  const selectGlow = glows[hash];
 
   return (
-    <div className={`relative overflow-hidden rounded-2xl bg-gradient-to-br ${selectGradient} p-6 border border-white/5 flex flex-col justify-between ${className}`}>
-      {/* Ambient background glows */}
-      <div className={`absolute -right-10 -top-10 h-32 w-32 rounded-full ${selectGlow.bg1} blur-2xl`} />
-      <div className={`absolute -bottom-12 -left-12 h-36 w-36 rounded-full ${selectGlow.bg2} blur-2xl`} />
-      
-      {/* Subtle editor wireframe overlay grid */}
+    <div className={`blog-card-visual relative overflow-hidden rounded-2xl bg-gradient-to-br ${gradients[hash]} p-6 border border-white/5 flex flex-col justify-between ${className}`}>
+      <div className={`absolute -right-10 -top-10 h-32 w-32 rounded-full ${glows[hash].bg1} blur-2xl`} />
+      <div className={`absolute -bottom-12 -left-12 h-36 w-36 rounded-full ${glows[hash].bg2} blur-2xl`} />
       <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff03_1px,transparent_1px),linear-gradient(to_bottom,#ffffff03_1px,transparent_1px)] bg-[size:24px_24px] pointer-events-none" />
 
       <div className="relative z-10 flex h-full flex-col justify-between gap-6">
@@ -149,11 +135,11 @@ function BlogVisual({ post, className = "aspect-[16/10]" }: { post: BlogPost; cl
             Insight
           </span>
         </div>
-        
-        <h3 className="max-w-[95%] text-xl md:text-2xl font-bold leading-snug text-white tracking-tight group-hover:text-blue-400 transition-colors duration-300">
+
+        <h3 className="blog-card-title max-w-[95%] text-xl md:text-2xl font-bold leading-snug text-white tracking-tight">
           {makeThumbnailTitle(title)}
         </h3>
-        
+
         <div className="flex justify-between items-center pt-2 border-t border-white/5">
           <span className="text-[9px] uppercase tracking-[0.2em] font-mono text-white/30">
             Huygen Studios
@@ -165,40 +151,24 @@ function BlogVisual({ post, className = "aspect-[16/10]" }: { post: BlogPost; cl
   );
 }
 
-// COMPONENT: Primary card grid layout item
 function BlogCard({ post }: { post: BlogPost }) {
   const title = post.title || "Untitled article";
   const description = post.description || "";
-  const slug = post.slug;
-  const category = getCategoryName(post.category);
+  const category = post.category?.name || "AI Automation";
   const readingTime = post.readingTime || "3 min read";
 
-  let formattedDate = "Recent";
-  try {
-    if (post.publishedAt) {
-      const d = new Date(post.publishedAt);
-      if (!isNaN(d.getTime())) {
-        formattedDate = d.toLocaleDateString("en-US", { 
-          month: "short", 
-          day: "numeric", 
-          year: "numeric" 
-        });
-      }
-    }
-  } catch {}
-
   return (
-    <Link href={`/blog/${slug}`} className="group flex flex-col gap-4 text-left">
+    <Link href={`/blog/${encodeBlogSlug(post.slug)}`} className="blog-card group flex flex-col gap-4 text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-blue-400">
       <BlogVisual post={post} className="aspect-[16/10] w-full" />
       <div className="flex flex-col gap-2">
         <div className="flex items-center gap-3 text-xs font-mono text-[#93969e]">
           <span className="text-blue-400 font-bold">{category}</span>
-          <span>•</span>
-          <span>{formattedDate}</span>
-          <span>•</span>
+          <span>&bull;</span>
+          <span>{formatPostDate(post.publishedAt)}</span>
+          <span>&bull;</span>
           <span>{readingTime}</span>
         </div>
-        <h3 className="text-xl font-bold text-white group-hover:text-blue-400 transition-colors leading-snug">
+        <h3 className="blog-card-title text-xl font-bold text-white leading-snug">
           {title}
         </h3>
         {description && (
@@ -211,38 +181,22 @@ function BlogCard({ post }: { post: BlogPost }) {
   );
 }
 
-// COMPONENT: Compact horizontal card listing for featured column
 function CompactBlogCard({ post }: { post: BlogPost }) {
   const title = post.title || "Untitled article";
-  const slug = post.slug;
-  const category = getCategoryName(post.category);
+  const category = post.category?.name || "AI Automation";
   const readingTime = post.readingTime || "3 min read";
 
-  let formattedDate = "Recent";
-  try {
-    if (post.publishedAt) {
-      const d = new Date(post.publishedAt);
-      if (!isNaN(d.getTime())) {
-        formattedDate = d.toLocaleDateString("en-US", { 
-          month: "short", 
-          day: "numeric", 
-          year: "numeric" 
-        });
-      }
-    }
-  } catch {}
-
   return (
-    <Link href={`/blog/${slug}`} className="group flex gap-4 text-left items-start pb-4 border-b border-white/5 last:border-0 last:pb-0">
+    <Link href={`/blog/${encodeBlogSlug(post.slug)}`} className="blog-card group flex gap-4 text-left items-start pb-4 border-b border-white/5 last:border-0 last:pb-0 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-blue-400">
       <BlogVisual post={post} className="w-24 h-16 md:w-32 md:h-20 flex-shrink-0" />
       <div className="flex flex-col gap-1 justify-center min-w-0">
         <span className="text-[10px] font-mono text-blue-400 uppercase tracking-wider">{category}</span>
-        <h4 className="text-sm font-bold text-white group-hover:text-blue-400 transition-colors line-clamp-2 leading-snug font-sans">
+        <h4 className="blog-card-title text-sm font-bold text-white line-clamp-2 leading-snug font-sans">
           {title}
         </h4>
         <div className="flex items-center gap-2 text-[10px] font-mono text-[#93969e]">
-          <span>{formattedDate}</span>
-          <span>•</span>
+          <span>{formatPostDate(post.publishedAt)}</span>
+          <span>&bull;</span>
           <span>{readingTime}</span>
         </div>
       </div>
@@ -251,23 +205,21 @@ function CompactBlogCard({ post }: { post: BlogPost }) {
 }
 
 export function BlogCatalog({ posts }: BlogCatalogProps) {
+  const catalogRef = useRef<HTMLDivElement>(null);
   const [activeCategory, setActiveCategory] = useState("All");
 
-  // Filter posts dynamically
   const filteredPosts = useMemo(() => {
     if (activeCategory === "All") return posts;
     return posts.filter(
-      (p) => p.category && p.category.name.toLowerCase() === activeCategory.toLowerCase()
+      (post) => post.category?.name.toLowerCase() === activeCategory.toLowerCase()
     );
   }, [posts, activeCategory]);
 
-  // Extract featured posts: posts containing 'featured' tag or the newest 3 posts
   const { featuredPost, secondaryFeatured } = useMemo(() => {
     if (posts.length === 0) return { featuredPost: null, secondaryFeatured: [] };
 
-    // Find any post containing a 'featured' tag or fallback to latest
-    const featured = posts.find((p) => p.tags?.some((t) => t.name.toLowerCase() === "featured")) || posts[0];
-    const others = posts.filter((p) => p.id !== featured.id).slice(0, 2);
+    const featured = posts.find((post) => post.tags.some((tag) => tag.name.toLowerCase() === "featured")) || posts[0];
+    const others = posts.filter((post) => post.id !== featured.id).slice(0, 2);
 
     return {
       featuredPost: featured,
@@ -275,21 +227,78 @@ export function BlogCatalog({ posts }: BlogCatalogProps) {
     };
   }, [posts]);
 
-  // Dynamic date rendering helper for large featured card
-  const getFormattedDate = (dateStr?: string | null) => {
-    if (!dateStr) return "Recent";
-    try {
-      const d = new Date(dateStr);
-      if (!isNaN(d.getTime())) {
-        return d.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
-      }
-    } catch {}
-    return "Recent";
-  };
+  useGSAP(() => {
+    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const cards = gsap.utils.toArray<HTMLElement>(".blog-card");
+
+    gsap.set(cards, { opacity: 1, clearProps: "visibility" });
+    gsap.set(".blog-card-image", { scale: 1, y: 0 });
+    gsap.set(".blog-card-overlay", { opacity: 0 });
+
+    if (reduceMotion) return;
+
+    gsap.from(cards, {
+      opacity: 0,
+      y: 18,
+      duration: 0.65,
+      stagger: 0.055,
+      ease: "power3.out",
+      clearProps: "opacity,transform",
+    });
+
+    const cleanups = cards.map((card) => {
+      const image = card.querySelector(".blog-card-image");
+      const visual = card.querySelector(".blog-card-visual");
+      const overlay = card.querySelector(".blog-card-overlay");
+      const title = card.querySelector(".blog-card-title");
+      const arrow = card.querySelector("svg");
+
+      const enter = () => {
+        gsap.to(visual, { y: -3, duration: 0.45, ease: "power3.out" });
+        gsap.to(image, { scale: 1.055, y: -4, duration: 0.65, ease: "power3.out" });
+        gsap.to(overlay, { opacity: 1, duration: 0.35, ease: "power2.out" });
+        gsap.to(title, { color: "#4a79ff", x: 2, duration: 0.35, ease: "power2.out" });
+        gsap.to(arrow, { x: 3, y: -3, duration: 0.35, ease: "power2.out" });
+      };
+
+      const leave = () => {
+        gsap.to(visual, { y: 0, duration: 0.45, ease: "power3.out" });
+        gsap.to(image, { scale: 1, y: 0, duration: 0.65, ease: "power3.out" });
+        gsap.to(overlay, { opacity: 0, duration: 0.35, ease: "power2.out" });
+        gsap.to(title, { color: "#ffffff", x: 0, duration: 0.35, ease: "power2.out" });
+        gsap.to(arrow, { x: 0, y: 0, duration: 0.35, ease: "power2.out" });
+      };
+      const pointerOver = (event: PointerEvent) => {
+        if (!card.contains(event.relatedTarget as Node | null)) enter();
+      };
+      const pointerOut = (event: PointerEvent) => {
+        if (!card.contains(event.relatedTarget as Node | null)) leave();
+      };
+
+      card.addEventListener("pointerenter", enter);
+      card.addEventListener("pointerleave", leave);
+      card.addEventListener("pointerover", pointerOver);
+      card.addEventListener("pointerout", pointerOut);
+      card.addEventListener("focus", enter);
+      card.addEventListener("blur", leave);
+
+      return () => {
+        card.removeEventListener("pointerenter", enter);
+        card.removeEventListener("pointerleave", leave);
+        card.removeEventListener("pointerover", pointerOver);
+        card.removeEventListener("pointerout", pointerOut);
+        card.removeEventListener("focus", enter);
+        card.removeEventListener("blur", leave);
+      };
+    });
+
+    return () => {
+      cleanups.forEach((cleanup) => cleanup());
+    };
+  }, { scope: catalogRef, dependencies: [filteredPosts.length, activeCategory] });
 
   return (
-    <div className="space-y-16">
-      {/* Category selector strip */}
+    <div ref={catalogRef} className="space-y-16">
       <div className="border-y border-white/5 py-8">
         <div className="flex items-center gap-2 mb-6 text-neutral-400 text-xs font-mono tracking-widest uppercase">
           <Compass size={14} className="text-blue-400" />
@@ -314,7 +323,6 @@ export function BlogCatalog({ posts }: BlogCatalogProps) {
                     : "border-white/5 bg-neutral-950/40 hover:border-white/10 hover:bg-neutral-900/30"
                 }`}
               >
-                {/* Decorative glow blob */}
                 <div className={`absolute -right-6 -bottom-6 w-20 h-20 rounded-full bg-gradient-to-br ${config.color} opacity-40 blur-lg group-hover:scale-125 transition-transform duration-500`} />
                 <span className="text-[9px] font-mono uppercase tracking-[0.2em] text-white/30">Select</span>
                 <h4 className="text-xs md:text-sm font-bold text-white relative z-10 transition-colors group-hover:text-blue-400">
@@ -326,7 +334,6 @@ export function BlogCatalog({ posts }: BlogCatalogProps) {
         </div>
       </div>
 
-      {/* Featured Section — Only shown when category is 'All' */}
       {activeCategory === "All" && featuredPost && (
         <section className="space-y-6">
           <div className="flex items-center justify-between border-b border-white/5 pb-4">
@@ -335,24 +342,23 @@ export function BlogCatalog({ posts }: BlogCatalogProps) {
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-stretch">
-            {/* Main large featured card */}
             <div className="lg:col-span-2 flex">
               <Link
-                href={`/blog/${featuredPost.slug}`}
-                className="group flex flex-col gap-6 p-6 rounded-3xl border border-white/5 bg-neutral-950/20 hover:border-blue-500/30 hover:bg-neutral-900/10 transition-all w-full justify-between"
+                href={`/blog/${encodeBlogSlug(featuredPost.slug)}`}
+                className="blog-card group flex flex-col gap-6 p-6 rounded-3xl border border-white/5 bg-neutral-950/20 hover:border-blue-500/30 hover:bg-neutral-900/10 transition-all w-full justify-between focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-blue-400"
               >
                 <BlogVisual post={featuredPost} className="aspect-[16/9] w-full" />
                 <div className="space-y-4">
                   <div className="flex flex-wrap items-center gap-3 text-xs font-mono text-[#93969e]">
                     <span className="px-3 py-1 rounded-full border border-blue-500/20 bg-blue-500/5 text-blue-400 font-bold uppercase tracking-wider text-[10px]">
-                      {getCategoryName(featuredPost.category)}
+                      {featuredPost.category?.name || "AI Automation"}
                     </span>
-                    <span>•</span>
-                    <span>{getFormattedDate(featuredPost.publishedAt)}</span>
-                    <span>•</span>
+                    <span>&bull;</span>
+                    <span>{formatPostDate(featuredPost.publishedAt, "long")}</span>
+                    <span>&bull;</span>
                     <span>{featuredPost.readingTime}</span>
                   </div>
-                  <h3 className="text-2xl md:text-4xl font-extrabold text-white tracking-tight leading-tight group-hover:text-blue-400 transition-colors font-sans">
+                  <h3 className="blog-card-title text-2xl md:text-4xl font-extrabold text-white tracking-tight leading-tight font-sans">
                     {featuredPost.title}
                   </h3>
                   {featuredPost.description && (
@@ -361,13 +367,12 @@ export function BlogCatalog({ posts }: BlogCatalogProps) {
                     </p>
                   )}
                   <div className="flex items-center text-sm text-white font-bold group-hover:text-blue-400 transition-colors pt-2">
-                    Read Article <ArrowUpRight size={16} className="ml-1 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+                    Read Article <ArrowUpRight size={16} className="ml-1" />
                   </div>
                 </div>
               </Link>
             </div>
 
-            {/* Stack of secondary featured cards */}
             <div className="flex flex-col justify-between gap-6 p-6 rounded-3xl border border-white/5 bg-neutral-950/20">
               <div className="space-y-6">
                 <span className="text-[10px] font-mono tracking-wider text-[#93969e] uppercase block pb-3 border-b border-white/5">
@@ -389,7 +394,6 @@ export function BlogCatalog({ posts }: BlogCatalogProps) {
         </section>
       )}
 
-      {/* Dynamic/Recent Grid */}
       <section className="space-y-8">
         <div className="flex items-center justify-between border-b border-white/5 pb-4">
           <h2 className="text-xs font-mono text-[#93969e] tracking-widest uppercase">

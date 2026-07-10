@@ -12,13 +12,7 @@ interface PostPageProps {
 }
 
 export const dynamicParams = true;
-
-export async function generateStaticParams() {
-  const posts = await getBlogPosts();
-  return posts.map((post) => ({
-    slug: post.slug,
-  }));
-}
+export const revalidate = 300;
 
 export async function generateMetadata({ params }: PostPageProps): Promise<Metadata> {
   const { slug: rawSlug } = await params;

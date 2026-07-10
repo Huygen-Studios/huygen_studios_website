@@ -25,9 +25,15 @@ function extractSinglePost(response: unknown): unknown | null {
   return response.post ?? response.data ?? response.item ?? null;
 }
 
-export async function getMarblePosts(): Promise<BlogPost[]> {
+type MarblePostsOptions = {
+  fresh?: boolean;
+};
+
+export async function getMarblePosts(options: MarblePostsOptions = {}): Promise<BlogPost[]> {
   const response = await marbleFetch<unknown>("/posts", {
-    next: { revalidate: 300, tags: ["marble-posts"] },
+    ...(options.fresh
+      ? { cache: "no-store" }
+      : { next: { revalidate: 300, tags: ["marble-posts"] } }),
   });
 
   const posts = extractPostArray(response)
@@ -64,12 +70,23 @@ async function getMarblePostByListLookup(slug: string): Promise<BlogPost | null>
   return posts.find((post) => normalizeBlogSlug(post.slug) === slug) ?? null;
 }
 
+async function getFreshMarblePostByListLookup(slug: string): Promise<BlogPost | null> {
+  const posts = await getMarblePosts({ fresh: true });
+  return posts.find((post) => normalizeBlogSlug(post.slug) === slug) ?? null;
+}
+
 export async function getMarblePostBySlug(rawSlug: string): Promise<BlogPost | null> {
   const slug = normalizeBlogSlug(rawSlug);
   if (!slug) return null;
 
-  const directPost = await getMarblePostByDirectEndpoint(slug);
-  if (directPost) return directPost;
+  // The catalog is sourced from /posts, so detail resolution starts from that same
+  // source of truth. This keeps n8n-published posts reachable even when Marble's
+  // per-slug endpoint lags or is unavailable for a newly created article.
+  const listedPost = await getMarblePostByListLookup(slug);
+  if (listedPost) return listedPost;
 
-  return getMarblePostByListLookup(slug);
+  const freshListedPost = await getFreshMarblePostByListLookup(slug);
+  if (freshListedPost) return freshListedPost;
+
+  return getMarblePostByDirectEndpoint(slug);
 }
