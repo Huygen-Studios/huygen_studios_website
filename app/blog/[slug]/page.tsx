@@ -1,8 +1,28 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import DOMPurify from "isomorphic-dompurify";
 import { marked } from "marked";
+
+function sanitizeHtmlSimple(html: string): string {
+  if (!html) return "";
+  
+  // Remove script, iframe, object, embed tags and their contents
+  let clean = html.replace(/<(script|iframe|object|embed)\b[^>]*>([\s\S]*?)<\/\1>/gi, "");
+  // Clean unclosed/empty/self-closing tags
+  clean = clean.replace(/<(script|iframe|object|embed)\b[^>]*\/?>/gi, "");
+
+  // Remove event handlers like onload, onerror, onclick, etc.
+  clean = clean.replace(/\b(on[a-z]+)\s*=\s*("[^"]*"|'[^']*'|[^\s>]*)/gi, "");
+
+  // Remove style attribute
+  clean = clean.replace(/\bstyle\s*=\s*("[^"]*"|'[^']*'|[^\s>]*)/gi, "");
+
+  // Remove javascript: pseudo-protocol in href/src
+  clean = clean.replace(/href\s*=\s*["']\s*javascript:[^"']*["']/gi, 'href="#"');
+  clean = clean.replace(/src\s*=\s*["']\s*javascript:[^"']*["']/gi, 'src=""');
+
+  return clean;
+}
 import { SecondaryPageLayout } from "@/components/web3/SecondaryPageLayout";
 import { encodeBlogSlug, getBlogPosts, getBlogPostBySlug, normalizeBlogSlug } from "@/lib/blog";
 import { BlogPost } from "@/lib/blog/types";
@@ -103,11 +123,7 @@ export default async function BlogPostPage({ params }: PostPageProps) {
         .replace(/<\/h1>/gi, "</h2>")
     : "";
 
-  const sanitizedContentHtml = DOMPurify.sanitize(cleanedHtml, {
-    FORBID_TAGS: ["script", "iframe", "object", "embed"],
-    FORBID_ATTR: ["onerror", "onload", "onclick", "onmouseover", "style"],
-    ADD_ATTR: ["data-cover-image-credit"],
-  }).replace(
+  const sanitizedContentHtml = sanitizeHtmlSimple(cleanedHtml).replace(
     /<a\s+([^>]*href=["']https?:\/\/(?![^"']*huygenstudios\.com)[^>]+)>/gi,
     (match) => match.includes(" rel=") ? match : match.replace("<a ", '<a rel="noopener noreferrer" ')
   );
