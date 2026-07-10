@@ -1,11 +1,11 @@
 "use client";
 
 import { useMemo, useRef, useState } from "react";
-import Image from "next/image";
 import { ArrowUpRight, Compass } from "lucide-react";
 import { gsap, useGSAP } from "../animations/gsap-client";
 import { BlogPost } from "@/lib/blog/types";
 import { AnimatedBlogCard } from "./AnimatedBlogCard";
+import { SafeBlogCoverImage } from "./SafeBlogCoverImage";
 
 interface BlogCatalogProps {
   posts: BlogPost[];
@@ -88,12 +88,10 @@ function BlogVisual({ post, className = "aspect-[16/10]" }: { post: BlogPost; cl
   if (imageUrl) {
     return (
       <div className={`blog-card-visual relative overflow-hidden rounded-2xl border border-white/5 ${className}`}>
-        <Image
+        <SafeBlogCoverImage
           src={imageUrl}
           alt={post.coverImage?.alt || title}
-          fill
-          className="blog-card-image object-cover"
-          sizes="(max-width: 768px) 100vw, 33vw"
+          className="blog-card-image w-full h-full object-cover"
         />
         <div className="blog-card-overlay absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0" />
       </div>

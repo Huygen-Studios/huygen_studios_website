@@ -125,28 +125,47 @@ export async function getMarblePostBySlug(rawSlug: string): Promise<BlogPost | n
   const slug = normalizeBlogSlug(rawSlug);
   if (!slug) return null;
 
-  let directError: unknown = null;
   try {
     const directPost = await getMarblePostByDirectEndpoint(slug);
     if (directPost) return directPost;
   } catch (error) {
-    directError = error;
+    if (error instanceof MarbleApiError) {
+      if (error.status === 401 || error.status === 403) {
+        throw new Error(`Marble CMS Authentication Error: ${error.status} ${error.statusText}`);
+      }
+      if (error.status === 429) {
+        throw new Error("Marble CMS API rate limit exceeded (429)");
+      }
+      if (error.status >= 500) {
+        throw new Error(`Marble CMS Server Error: ${error.status} ${error.statusText}`);
+      }
+    }
     console.warn("Marble direct post lookup failed; trying published posts list", {
       slug,
-      error: error instanceof MarbleApiError
-        ? { status: error.status, statusText: error.statusText }
-        : error instanceof Error
-          ? { name: error.name, message: error.message }
-          : { name: "UnknownError" },
+      error,
     });
   }
 
-  const listedPost = await getMarblePostByListLookup(slug);
-  if (listedPost) return listedPost;
+  try {
+    const listedPost = await getMarblePostByListLookup(slug);
+    if (listedPost) return listedPost;
 
-  const freshListedPost = await getFreshMarblePostByListLookup(slug);
-  if (freshListedPost) return freshListedPost;
+    const freshListedPost = await getFreshMarblePostByListLookup(slug);
+    if (freshListedPost) return freshListedPost;
+  } catch (error) {
+    if (error instanceof MarbleApiError) {
+      if (error.status === 401 || error.status === 403) {
+        throw new Error(`Marble CMS Authentication Error: ${error.status} ${error.statusText}`);
+      }
+      if (error.status === 429) {
+        throw new Error("Marble CMS API rate limit exceeded (429)");
+      }
+      if (error.status >= 500) {
+        throw new Error(`Marble CMS Server Error: ${error.status} ${error.statusText}`);
+      }
+    }
+    throw error;
+  }
 
-  if (directError) throw directError;
   return null;
 }

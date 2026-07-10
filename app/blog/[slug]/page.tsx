@@ -6,6 +6,7 @@ import { marked } from "marked";
 import { SecondaryPageLayout } from "@/components/web3/SecondaryPageLayout";
 import { encodeBlogSlug, getBlogPosts, getBlogPostBySlug, normalizeBlogSlug } from "@/lib/blog";
 import { BlogPost } from "@/lib/blog/types";
+import { SafeBlogCoverImage } from "@/components/blog/SafeBlogCoverImage";
 
 interface PostPageProps {
   params: Promise<{ slug: string }>;
@@ -105,6 +106,7 @@ export default async function BlogPostPage({ params }: PostPageProps) {
   const sanitizedContentHtml = DOMPurify.sanitize(cleanedHtml, {
     FORBID_TAGS: ["script", "iframe", "object", "embed"],
     FORBID_ATTR: ["onerror", "onload", "onclick", "onmouseover", "style"],
+    ADD_ATTR: ["data-cover-image-credit"],
   }).replace(
     /<a\s+([^>]*href=["']https?:\/\/(?![^"']*huygenstudios\.com)[^>]+)>/gi,
     (match) => match.includes(" rel=") ? match : match.replace("<a ", '<a rel="noopener noreferrer" ')
@@ -207,14 +209,13 @@ export default async function BlogPostPage({ params }: PostPageProps) {
           </header>
 
           {/* Render Cover Image safely if present */}
-          {coverImage?.url && (
+          {coverImage && (
             <div className="max-w-[850px] mb-12 rounded-lg overflow-hidden border border-[rgba(255,255,255,0.1)] aspect-[16/9] relative">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
+              <SafeBlogCoverImage
                 src={coverImage.url}
                 alt={coverImage.alt || title}
                 className="w-full h-full object-cover"
-                loading="eager"
+                priority
               />
             </div>
           )}

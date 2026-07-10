@@ -1,5 +1,5 @@
 {
-  "name": "Huygen Hybrid SEO + HN Latest Auto Publisher v8.0 Image + 404 Safe",
+  "name": "Huygen Hybrid SEO + HN Latest Auto Publisher v8.1 Google Images + 404 Safe",
   "nodes": [
     {
       "parameters": {
@@ -242,7 +242,7 @@
         880,
         20
       ],
-      "notes": "Image-safe payload: only sends coverImage when a valid HTTP(S) URL exists. Optional envs: MARBLE_DEFAULT_COVER_IMAGE_URL, BLOG_DEFAULT_COVER_IMAGE_URL, MARBLE_COVER_IMAGE_URL_TEMPLATE."
+      "notes": "Builds an image-safe draft Marble payload. The v8.1 Google image stage later replaces or adds coverImage only after the same-origin proxy has been verified."
     },
     {
       "parameters": {
@@ -313,7 +313,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        2220,
+        4260,
         -120
       ],
       "notes": "Idempotent Marble write. Uses POST for new slugs and PATCH for existing slugs. Returns all HTTP statuses so the workflow can recover from 409 collisions, 404 races, 429s, and 5xx errors."
@@ -354,28 +354,28 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        3780,
+        5820,
         -240
       ],
       "notes": "Optional cache revalidation. The prepared URL includes slug, path, public URL, paths JSON, and optional secret. Failure does not falsely mark success; the public URL verification node is the source of truth."
     },
     {
       "parameters": {
-        "jsCode": "const result = $input.first().json;\nreturn [{\n  json: {\n    status: 'published_verified',\n    sourceMode: result.sourceMode,\n    title: result.title,\n    slug: result.slug,\n    publicUrl: result.publicUrl,\n    sourceUrls: result.sourceUrls || [],\n    coverImage: result.coverImage || null,\n    coverImageSource: result.coverImageSource || 'omitted-safe-no-valid-url',\n    marbleWriteMethod: result.marbleWriteMethod,\n    marbleWriteStatusCode: result.marbleWriteStatusCode,\n    marblePost: result.marblePost,\n    publicStatusCode: result.publicStatusCode,\n    revalidationAttempted: result.revalidationAttempted,\n    revalidationStatusCode: result.revalidationStatusCode || null,\n    quality: result.quality,\n    publishedAt: new Date().toISOString()\n  }\n}];"
+        "jsCode": "const result = $input.first().json;\nreturn [{\n  json: {\n    status: 'published_verified',\n    sourceMode: result.sourceMode,\n    title: result.title,\n    slug: result.slug,\n    publicUrl: result.publicUrl,\n    sourceUrls: result.sourceUrls || [],\n    coverImage: result.coverImage || null,\n    coverImageSource: result.coverImageSource || 'omitted-safe-no-valid-url',\n    imageSearchQuery: result.imageSearchQuery || '',\n    imageDirectUrl: result.imageDirectUrl || '',\n    imageContextUrl: result.imageContextUrl || '',\n    imageSourceTitle: result.imageSourceTitle || '',\n    imageSourceHost: result.imageSourceHost || '',\n    imageProxyVerified: result.imageProxyVerified === true,\n    imageProxyStatusCode: result.imageProxyStatusCode || null,\n    googleImageSearchStatusCode: result.googleImageSearchStatusCode || null,\n    googleImageEligibleCount: result.googleImageEligibleCount || 0,\n    imageCreditAppended: result.imageCreditAppended === true,\n    marbleWriteMethod: result.marbleWriteMethod,\n    marbleWriteStatusCode: result.marbleWriteStatusCode,\n    marblePost: result.marblePost,\n    publicStatusCode: result.publicStatusCode,\n    revalidationAttempted: result.revalidationAttempted,\n    revalidationStatusCode: result.revalidationStatusCode || null,\n    quality: result.quality,\n    publishedAt: new Date().toISOString()\n  }\n}];"
       },
       "id": "c78626dc-0a83-42fa-a6f1-b13045ab8fcc",
       "name": "Published Output",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        4560,
+        6600,
         -140
       ],
       "notes": "Final success is emitted only after Marble returns the post as published and the public /blog/[slug] URL responds successfully without known error-page markers."
     },
     {
       "parameters": {
-        "jsCode": "const item = $input.first().json;\nreturn [{\n  json: {\n    status: item.status || 'skipped',\n    reason: item.blockingReason || (item.autoPublish ? 'Quality gate did not pass.' : 'AUTO_PUBLISH_ENABLED=false. Dry run only.'),\n    sourceMode: item.sourceMode,\n    title: item.title,\n    slug: item.slug,\n    sourceUrls: item.sourceUrls || [],\n    approved: item.approved,\n    autoPublish: item.autoPublish,\n    quality: item.quality,\n    marbleKeyPrefix: item.marbleKeyPrefix,\n    checkedAt: new Date().toISOString()\n  }\n}];\n"
+        "jsCode": "const item = $input.first().json;\nreturn [{\n  json: {\n    status: item.status || 'skipped',\n    reason: item.blockingReason || item.imageSelectionError || item.googleImageCredentialError || (item.autoPublish ? 'Quality gate did not pass.' : 'AUTO_PUBLISH_ENABLED=false. Dry run only.'),\n    sourceMode: item.sourceMode,\n    title: item.title,\n    slug: item.slug,\n    sourceUrls: item.sourceUrls || [],\n    approved: item.approved,\n    autoPublish: item.autoPublish,\n    coverImage: item.coverImage || null,\n    coverImageReady: item.coverImageReady === true,\n    coverImageSource: item.coverImageSource || '',\n    imageSearchQuery: item.imageSearchQuery || '',\n    imageSelectionError: item.imageSelectionError || '',\n    imageProxyFailureReason: item.imageProxyFailureReason || '',\n    googleImageSearchStatusCode: item.googleImageSearchStatusCode || null,\n    marbleKeyPrefix: item.marbleKeyPrefix,\n    quality: item.quality,\n    checkedAt: new Date().toISOString()\n  }\n}];"
       },
       "id": "345f3447-b13d-4bf8-88e7-75fa83456a4d",
       "name": "Dry Run or Skipped Output",
@@ -542,7 +542,7 @@
         2500,
         210
       ],
-      "notes": "Prepares Marble payload after the recovery draft quality gate.\nImage-safe payload: only sends coverImage when a valid HTTP(S) URL exists. Optional envs: MARBLE_DEFAULT_COVER_IMAGE_URL, BLOG_DEFAULT_COVER_IMAGE_URL, MARBLE_COVER_IMAGE_URL_TEMPLATE."
+      "notes": "Builds an image-safe draft Marble payload. The v8.1 Google image stage later replaces or adds coverImage only after the same-origin proxy has been verified."
     },
     {
       "parameters": {
@@ -572,7 +572,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        1440,
+        3480,
         -120
       ],
       "notes": "Preflight slug lookup. A 200 becomes PATCH, a 404 becomes POST. Other statuses are rejected with a clear error."
@@ -586,7 +586,7 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1700,
+        3740,
         -120
       ],
       "notes": "Builds an idempotent create-or-update request from the slug preflight result."
@@ -600,7 +600,7 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1960,
+        4000,
         -120
       ]
     },
@@ -613,7 +613,7 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        2480,
+        4520,
         -120
       ],
       "notes": "Recovers from duplicate-slug 409s, PATCH/POST races, throttling, and transient Marble 5xx responses."
@@ -647,7 +647,7 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        2740,
+        4780,
         -120
       ]
     },
@@ -662,7 +662,7 @@
       "type": "n8n-nodes-base.wait",
       "typeVersion": 1.1,
       "position": [
-        2740,
+        4780,
         20
       ],
       "webhookId": "8483a920-b307-406a-b2aa-1657249f1774",
@@ -699,7 +699,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        3000,
+        5040,
         -160
       ],
       "retryOnFail": true,
@@ -716,7 +716,7 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        3260,
+        5300,
         -160
       ],
       "notes": "Uses the canonical slug returned by Marble, builds the public URL, and appends the detail and index paths to the optional revalidation endpoint."
@@ -750,7 +750,7 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        3520,
+        5560,
         -160
       ]
     },
@@ -793,7 +793,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        4040,
+        6080,
         -160
       ],
       "retryOnFail": true,
@@ -810,25 +810,271 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        4300,
+        6340,
         -160
       ],
       "notes": "Rejects soft-404 and generic server-error pages even if the host responds with HTTP 200."
     },
     {
       "parameters": {
-        "content": "## v8.0 image + 404 safety\n\n**Required:** `MARBLE_API_KEY` (private `msk_...`), `MARBLE_CATEGORY_ID`, `NEXT_PUBLIC_SITE_URL`.\n\n**Optional cover image:** `MARBLE_DEFAULT_COVER_IMAGE_URL`, `BLOG_DEFAULT_COVER_IMAGE_URL`, or `MARBLE_COVER_IMAGE_URL_TEMPLATE` with `{slug}`, `{title}`, `{mode}`. Invalid/missing image URLs are omitted instead of sending `null`.\n\n**Optional revalidation:** `HUYGEN_REVALIDATE_URL` and `HUYGEN_REVALIDATE_SECRET`. The workflow verifies Marble first, then the public `/blog/[slug]` page.\n\n**Retry controls:** `MARBLE_WRITE_MAX_ATTEMPTS` (default 4).",
-        "height": 360,
+        "content": "## v8.1 Google images + 404 safety\n\n**Required publishing:** `MARBLE_API_KEY` (private `msk_...` with `posts_read` + `posts_write`), `MARBLE_CATEGORY_ID`, `NEXT_PUBLIC_SITE_URL`.\n\n**Required Google image search:** `GOOGLE_CSE_API_KEY`, `GOOGLE_CSE_CX`. Create a Google Programmable Search Engine with image search and whole-web search enabled.\n\n**Image controls:** `GOOGLE_IMAGE_SEARCH_ENABLED=true`, `REQUIRE_COVER_IMAGE=true`, `REQUIRE_GOOGLE_IMAGE=false`, `GOOGLE_IMAGE_SOURCE_SITES`, `GOOGLE_IMAGE_ALLOWED_HOSTS`, `GOOGLE_IMAGE_RIGHTS` (optional CC filter), `GOOGLE_IMAGE_MIN_WIDTH`, `GOOGLE_IMAGE_MIN_HEIGHT`, `GOOGLE_IMAGE_MAX_BYTES`, `BLOG_IMAGE_PROXY_PATH=/api/blog/image`, `APPEND_COVER_IMAGE_CREDIT=true`.\n\n**Fallback:** the workflow uses `GOOGLE_IMAGE_FALLBACK_URL`, `MARBLE_DEFAULT_COVER_IMAGE_URL`, `BLOG_DEFAULT_COVER_IMAGE_URL`, then `${NEXT_PUBLIC_SITE_URL}/images/blog/default-cover.svg`.\n\n**Website requirement:** implement GET + HEAD `/api/blog/image` as described in the supplied Google Antigravity prompt. It must proxy only approved remote image hosts and return an image fallback rather than a 404.\n\n**Optional revalidation:** `HUYGEN_REVALIDATE_URL`, `HUYGEN_REVALIDATE_SECRET`.\n\n**Retry controls:** `MARBLE_WRITE_MAX_ATTEMPTS` (default 4).",
+        "height": 560,
         "width": 520
       },
       "id": "3241b24b-a627-49dc-b930-1b465ec3be04",
-      "name": "v8.0 Setup Notes",
+      "name": "v8.1 Google Image Setup Notes",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        3040,
+        5080,
         100
       ]
+    },
+    {
+      "parameters": {
+        "jsCode": "function envBool(name, fallback) {\n  const value = $env[name];\n  if (value === undefined || value === null || String(value).trim() === '') return fallback;\n  return ['1', 'true', 'yes', 'on'].includes(String(value).trim().toLowerCase());\n}\nfunction envInt(name, fallback, min, max) {\n  const parsed = parseInt(String($env[name] || ''), 10);\n  const value = Number.isFinite(parsed) ? parsed : fallback;\n  return Math.min(max, Math.max(min, value));\n}\nfunction clean(value) {\n  return String(value || '').replace(/<[^>]+>/g, ' ').replace(/\\s+/g, ' ').trim();\n}\nfunction uniqueList(value, fallback) {\n  return [...new Set(String(value || fallback || '')\n    .split(/[|,]/)\n    .map(v => v.trim().toLowerCase())\n    .filter(Boolean))];\n}\n\nconst item = $input.first().json;\nconst googleApiKey = String($env.GOOGLE_CSE_API_KEY || $env.GOOGLE_CUSTOM_SEARCH_API_KEY || '').trim();\nconst googleCx = String($env.GOOGLE_CSE_CX || $env.GOOGLE_PROGRAMMABLE_SEARCH_ENGINE_ID || '').trim();\nconst googleImageSearchEnabled = envBool('GOOGLE_IMAGE_SEARCH_ENABLED', true);\nconst requireCoverImage = envBool('REQUIRE_COVER_IMAGE', true);\nconst requireGoogleImage = envBool('REQUIRE_GOOGLE_IMAGE', false);\nconst sourceSites = uniqueList(\n  $env.GOOGLE_IMAGE_SOURCE_SITES,\n  'unsplash.com,pexels.com,pixabay.com,wikimedia.org'\n);\nconst allowedImageHosts = uniqueList(\n  $env.GOOGLE_IMAGE_ALLOWED_HOSTS,\n  'images.unsplash.com,images.pexels.com,cdn.pixabay.com,upload.wikimedia.org'\n);\n\nconst title = clean(item.title);\nconst keyword = clean(item.primaryKeyword);\nconst cluster = clean(item.cluster);\nconst sourceMode = String(item.sourceMode || 'seo').trim().toLowerCase();\nconst editorialTerms = sourceMode === 'news'\n  ? 'technology business editorial concept'\n  : 'professional business technology editorial concept';\nconst core = [keyword, cluster, title, editorialTerms]\n  .filter(Boolean)\n  .join(' ')\n  .slice(0, 720);\nconst siteFilter = sourceSites.length\n  ? `(${sourceSites.map(site => `site:${site}`).join(' OR ')})`\n  : '';\nconst imageSearchQuery = `${core} ${siteFilter} -logo -watermark -screenshot -infographic -text overlay`\n  .replace(/\\s+/g, ' ')\n  .trim()\n  .slice(0, 1500);\n\nconst existingCoverImage = String(item.marbleBody?.coverImage || item.coverImage || '').trim();\nconst imageProxyPathRaw = String($env.BLOG_IMAGE_PROXY_PATH || '/api/blog/image').trim();\nconst imageProxyPath = imageProxyPathRaw.startsWith('/') ? imageProxyPathRaw : `/${imageProxyPathRaw}`;\nconst siteUrl = String(item.siteUrl || $env.NEXT_PUBLIC_SITE_URL || 'https://www.huygenstudios.com').replace(/\\/$/, '');\n\nreturn [{ json: {\n  ...item,\n  googleImageSearchEnabled,\n  googleImageCredentialsPresent: Boolean(googleImageSearchEnabled && googleApiKey && googleCx),\n  googleImageCredentialError: googleImageSearchEnabled && (!googleApiKey || !googleCx)\n    ? 'Google image search requires GOOGLE_CSE_API_KEY and GOOGLE_CSE_CX.'\n    : '',\n  requireCoverImage,\n  requireGoogleImage,\n  imageSearchQuery,\n  googleImageResultCount: envInt('GOOGLE_IMAGE_RESULT_COUNT', 10, 1, 10),\n  googleImageSize: String($env.GOOGLE_IMAGE_SIZE || 'large').trim(),\n  // Optional. Leave empty when restricting search to trusted stock/media sites.\n  // For Creative Commons-only search, set GOOGLE_IMAGE_RIGHTS explicitly.\n  googleImageRights: String($env.GOOGLE_IMAGE_RIGHTS || '').trim(),\n  googleImageCountry: String($env.GOOGLE_IMAGE_COUNTRY || 'us').trim().toLowerCase(),\n  googleImageLanguage: String($env.GOOGLE_IMAGE_LANGUAGE || 'lang_en').trim(),\n  googleImageSourceSites: sourceSites,\n  googleImageAllowedHosts: allowedImageHosts,\n  googleImageAllowAnyHost: envBool('GOOGLE_IMAGE_ALLOW_ANY_HOST', false),\n  googleImageMinWidth: envInt('GOOGLE_IMAGE_MIN_WIDTH', 1200, 320, 10000),\n  googleImageMinHeight: envInt('GOOGLE_IMAGE_MIN_HEIGHT', 630, 180, 10000),\n  googleImageMaxBytes: envInt('GOOGLE_IMAGE_MAX_BYTES', 5000000, 100000, 20000000),\n  imageProxyPath,\n  existingCoverImage,\n  siteUrl\n} }];"
+      },
+      "id": "25ceb9d6-03ef-48a1-846d-0154ad970a9f",
+      "name": "Prepare Google Image Search",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1400,
+        -360
+      ],
+      "notes": "Builds a relevant, licensed-source Google image query from the approved article title, cluster, and keyword. No API key is written into workflow data."
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c56c56ae-c952-4170-90d5-877170c7d182",
+              "leftValue": "={{$json.googleImageCredentialsPresent}}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "19a5ac22-92a9-490d-a68c-604657875f25",
+      "name": "Has Google Image Search Credentials?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1660,
+        -360
+      ],
+      "notes": "False branch uses a safe fallback. Set GOOGLE_CSE_API_KEY and GOOGLE_CSE_CX to enable Google image discovery."
+    },
+    {
+      "parameters": {
+        "url": "https://www.googleapis.com/customsearch/v1",
+        "sendQuery": true,
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/json"
+            },
+            {
+              "name": "User-Agent",
+              "value": "HuygenStudios-n8n/8.1"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 60000,
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          }
+        },
+        "specifyQuery": "json",
+        "jsonQuery": "={{ { key: $env.GOOGLE_CSE_API_KEY || $env.GOOGLE_CUSTOM_SEARCH_API_KEY, cx: $env.GOOGLE_CSE_CX || $env.GOOGLE_PROGRAMMABLE_SEARCH_ENGINE_ID, q: $json.imageSearchQuery, searchType: 'image', safe: 'active', num: $json.googleImageResultCount, imgSize: $json.googleImageSize, imgType: 'photo', gl: $json.googleImageCountry, lr: $json.googleImageLanguage, ...($json.googleImageRights ? { rights: $json.googleImageRights } : {}) } }}"
+      },
+      "id": "eee75077-6578-4c2c-be6b-0fb2998c3bcc",
+      "name": "Google Custom Image Search",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1920,
+        -500
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 10000,
+      "notes": "Official Google Programmable Search JSON API image search. SafeSearch is active. Search is restricted by default to configured stock/media source sites; GOOGLE_IMAGE_RIGHTS can optionally add Google licensing filters."
+    },
+    {
+      "parameters": {
+        "jsCode": "function envBool(name, fallback) {\n  const value = $env[name];\n  if (value === undefined || value === null || String(value).trim() === '') return fallback;\n  return ['1', 'true', 'yes', 'on'].includes(String(value).trim().toLowerCase());\n}\nfunction hostAllowed(host, allowedHosts) {\n  const normalized = String(host || '').toLowerCase();\n  return allowedHosts.some(domain => normalized === domain || normalized.endsWith(`.${domain}`));\n}\nfunction tokenize(value) {\n  return new Set(String(value || '').toLowerCase().split(/[^a-z0-9]+/).filter(word => word.length >= 3));\n}\nfunction overlapScore(a, b) {\n  let score = 0;\n  for (const word of a) if (b.has(word)) score += 1;\n  return score;\n}\nfunction normalizeUrl(raw) {\n  try {\n    const url = new URL(String(raw || '').trim());\n    if (!['http:', 'https:'].includes(url.protocol)) return '';\n    url.hash = '';\n    return url.toString();\n  } catch (e) {\n    return '';\n  }\n}\n\nconst base = $('Prepare Google Image Search').first().json;\nconst response = $input.first().json || {};\nconst statusCode = Number(response.statusCode || response.status || 0);\nconst body = response.body && typeof response.body === 'object' ? response.body : response;\nconst items = Array.isArray(body?.items) ? body.items : [];\nconst allowedHosts = Array.isArray(base.googleImageAllowedHosts) ? base.googleImageAllowedHosts : [];\nconst allowAnyHost = base.googleImageAllowAnyHost === true;\nconst queryWords = tokenize(base.imageSearchQuery);\nconst maxBytes = Number(base.googleImageMaxBytes || 5000000);\nconst minWidth = Number(base.googleImageMinWidth || 1200);\nconst minHeight = Number(base.googleImageMinHeight || 630);\n\nconst rejected = [];\nconst candidates = [];\nfor (const result of items) {\n  const directUrl = normalizeUrl(result?.link);\n  if (!directUrl) { rejected.push('invalid_url'); continue; }\n  const parsed = new URL(directUrl);\n  const mime = String(result?.mime || '').toLowerCase();\n  const width = Number(result?.image?.width || 0);\n  const height = Number(result?.image?.height || 0);\n  const byteSize = Number(result?.image?.byteSize || 0);\n  const extensionBlocked = /\\.(gif|svg)(?:$|\\?)/i.test(parsed.pathname + parsed.search);\n  if (extensionBlocked || mime.includes('gif') || mime.includes('svg')) { rejected.push('unsupported_format'); continue; }\n  if (mime && !/^image\\/(jpeg|jpg|png|webp|avif)$/i.test(mime)) { rejected.push('unsupported_mime'); continue; }\n  if (!allowAnyHost && !hostAllowed(parsed.hostname, allowedHosts)) { rejected.push(`host:${parsed.hostname}`); continue; }\n  if (byteSize > 0 && byteSize > maxBytes) { rejected.push('too_large'); continue; }\n  if (width > 0 && height > 0 && (width < 640 || height < 360)) { rejected.push('too_small'); continue; }\n\n  const ratio = width > 0 && height > 0 ? width / height : 16 / 9;\n  const ratioScore = Math.max(0, 40 - Math.abs(ratio - 16 / 9) * 35);\n  const sizeScore = (width >= minWidth ? 20 : 0) + (height >= minHeight ? 15 : 0) + Math.min(20, (width * height) / 500000);\n  const titleText = `${result?.title || ''} ${result?.snippet || ''} ${result?.displayLink || ''}`;\n  const relevanceScore = overlapScore(queryWords, tokenize(titleText)) * 8;\n  const hostPriority = parsed.hostname.endsWith('images.unsplash.com') ? 16\n    : parsed.hostname.endsWith('images.pexels.com') ? 14\n    : parsed.hostname.endsWith('cdn.pixabay.com') ? 12\n    : parsed.hostname.endsWith('upload.wikimedia.org') ? 10\n    : 0;\n  const landscapeBonus = ratio >= 1.35 && ratio <= 2.2 ? 25 : 0;\n  candidates.push({\n    directUrl,\n    contextUrl: normalizeUrl(result?.image?.contextLink),\n    thumbnailUrl: normalizeUrl(result?.image?.thumbnailLink),\n    title: String(result?.title || base.title || '').replace(/<[^>]+>/g, ' ').replace(/\\s+/g, ' ').trim(),\n    displayLink: String(result?.displayLink || parsed.hostname),\n    mime: mime || '',\n    width,\n    height,\n    byteSize,\n    host: parsed.hostname,\n    score: ratioScore + sizeScore + relevanceScore + hostPriority + landscapeBonus\n  });\n}\n\ncandidates.sort((a, b) => b.score - a.score);\nconst selected = candidates[0] || null;\nlet imageProxyUrl = '';\nif (selected) {\n  const proxy = new URL(base.imageProxyPath || '/api/blog/image', base.siteUrl);\n  proxy.searchParams.set('src', selected.directUrl);\n  proxy.searchParams.set('slug', String(base.slug || '').slice(0, 96));\n  imageProxyUrl = proxy.toString();\n}\n\nconst apiError = statusCode >= 200 && statusCode < 300\n  ? ''\n  : String(body?.error?.message || body?.message || `Google image search returned HTTP ${statusCode || 'unknown'}`);\n\nreturn [{ json: {\n  ...base,\n  googleImageSearchStatusCode: statusCode,\n  googleImageSearchError: apiError,\n  googleImageResultTotal: items.length,\n  googleImageEligibleCount: candidates.length,\n  googleImageRejectedCount: rejected.length,\n  googleImageTopCandidates: candidates.slice(0, 5),\n  imageCandidateFound: Boolean(selected),\n  imageDirectUrl: selected?.directUrl || '',\n  imageContextUrl: selected?.contextUrl || '',\n  imageSourceTitle: selected?.title || '',\n  imageSourceHost: selected?.host || '',\n  imageSourceMime: selected?.mime || '',\n  imageSourceWidth: selected?.width || 0,\n  imageSourceHeight: selected?.height || 0,\n  imageSourceByteSize: selected?.byteSize || 0,\n  imageProxyUrl,\n  imageSelectionError: selected ? '' : (apiError || 'Google returned no eligible image matching the configured host, size, format, and rights filters.')\n} }];"
+      },
+      "id": "d5a2ea29-3ef5-419f-915c-2db16f6f044d",
+      "name": "Select Relevant Google Image",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2180,
+        -500
+      ],
+      "notes": "Scores Google results by semantic overlap, image dimensions, 16:9 suitability, file size, format, and trusted image host. Defaults to Unsplash, Pexels, Pixabay, and Wikimedia delivery hosts."
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "37ce003c-0160-4abf-a33a-8cd6120301cd",
+              "leftValue": "={{$json.imageCandidateFound}}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "045363ae-840c-4d53-ad7c-2fd3d3573a2e",
+      "name": "Has Relevant Google Image?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2440,
+        -500
+      ],
+      "notes": "Only eligible, landscape-oriented, trusted-host images proceed to the same-origin proxy check."
+    },
+    {
+      "parameters": {
+        "method": "HEAD",
+        "url": "={{$json.imageProxyUrl}}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "image/avif,image/webp,image/png,image/jpeg,image/*;q=0.8"
+            },
+            {
+              "name": "Cache-Control",
+              "value": "no-cache"
+            },
+            {
+              "name": "User-Agent",
+              "value": "HuygenStudios-n8n/8.1 image verifier"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 45000,
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true,
+              "responseFormat": "text"
+            }
+          }
+        }
+      },
+      "id": "2ef7ff64-0aef-41c1-ab0c-bdc143d2ecc9",
+      "name": "Verify Same-Origin Image Proxy",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2700,
+        -600
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "notes": "Checks the website image proxy before Marble receives the cover URL. The Antigravity prompt creates this HEAD/GET route with host, MIME, redirect, size, SSRF, cache, and fallback controls."
+    },
+    {
+      "parameters": {
+        "jsCode": "let base = $input.first().json;\ntry {\n  const prepared = $('Prepare Google Image Search').first().json;\n  base = { ...prepared, ...base };\n} catch (e) {}\nreturn [{ json: {\n  ...base,\n  imageCandidateFound: false,\n  imageFallbackRequested: true,\n  imageSelectionError: base.imageSelectionError || base.googleImageCredentialError || 'Google image search was unavailable or did not return an eligible result.'\n} }];"
+      },
+      "id": "95737be6-747f-4d54-9e15-32747e358118",
+      "name": "Use Safe Cover Fallback",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2700,
+        -300
+      ],
+      "notes": "Preserves publishing context when Google credentials are absent or no candidate passes the filters."
+    },
+    {
+      "parameters": {
+        "jsCode": "function envBool(name, fallback) {\n  const value = $env[name];\n  if (value === undefined || value === null || String(value).trim() === '') return fallback;\n  return ['1', 'true', 'yes', 'on'].includes(String(value).trim().toLowerCase());\n}\nfunction normalizeHttpUrl(value, baseUrl) {\n  const raw = String(value || '').trim();\n  if (!raw) return '';\n  try {\n    const parsed = new URL(raw, baseUrl || undefined);\n    if (!['http:', 'https:'].includes(parsed.protocol)) return '';\n    return parsed.toString();\n  } catch (e) {\n    return '';\n  }\n}\nfunction escapeHtml(value) {\n  return String(value || '')\n    .replace(/&/g, '&amp;')\n    .replace(/</g, '&lt;')\n    .replace(/>/g, '&gt;')\n    .replace(/\"/g, '&quot;')\n    .replace(/'/g, '&#39;');\n}\nfunction headerValue(headers, name) {\n  if (!headers || typeof headers !== 'object') return '';\n  const target = String(name).toLowerCase();\n  for (const [key, value] of Object.entries(headers)) {\n    if (String(key).toLowerCase() === target) return Array.isArray(value) ? value[0] : String(value || '');\n  }\n  return '';\n}\n\nconst input = $input.first().json || {};\nlet selected = null;\ntry { selected = $('Select Relevant Google Image').first().json; } catch (e) {}\nconst isProxyResponse = Boolean(selected?.imageCandidateFound && (input.statusCode !== undefined || input.headers !== undefined));\nconst base = isProxyResponse ? selected : input;\nconst proxyStatusCode = isProxyResponse ? Number(input.statusCode || input.status || 0) : 0;\nconst proxyContentType = isProxyResponse ? headerValue(input.headers, 'content-type').toLowerCase() : '';\nconst proxyContentLength = isProxyResponse ? Number(headerValue(input.headers, 'content-length') || 0) : 0;\nconst maxBytes = Number(base.googleImageMaxBytes || 5000000);\nconst statusOk = proxyStatusCode >= 200 && proxyStatusCode < 400;\nconst typeOk = !proxyContentType || proxyContentType.startsWith('image/');\nconst sizeOk = !proxyContentLength || proxyContentLength <= maxBytes;\nconst imageProxyVerified = Boolean(isProxyResponse && statusOk && typeOk && sizeOk);\n\nconst siteUrl = String(base.siteUrl || $env.NEXT_PUBLIC_SITE_URL || 'https://www.huygenstudios.com').replace(/\\/$/, '');\nconst conventionalFallback = `${siteUrl}/images/blog/default-cover.svg`;\nconst fallbackCandidates = [\n  base.existingCoverImage,\n  $env.GOOGLE_IMAGE_FALLBACK_URL,\n  $env.MARBLE_DEFAULT_COVER_IMAGE_URL,\n  $env.BLOG_DEFAULT_COVER_IMAGE_URL,\n  conventionalFallback\n];\nlet fallbackUrl = '';\nfor (const candidate of fallbackCandidates) {\n  const normalized = normalizeHttpUrl(candidate, siteUrl);\n  if (normalized) { fallbackUrl = normalized; break; }\n}\n\nconst finalCoverImage = imageProxyVerified\n  ? normalizeHttpUrl(base.imageProxyUrl, siteUrl)\n  : fallbackUrl;\nconst coverImageSource = imageProxyVerified\n  ? 'google-custom-search-via-same-origin-proxy'\n  : (finalCoverImage ? 'safe-same-origin-or-configured-fallback' : 'omitted-safe-no-valid-url');\nconst requireCoverImage = base.requireCoverImage !== undefined\n  ? base.requireCoverImage === true\n  : envBool('REQUIRE_COVER_IMAGE', true);\nconst coverImageReady = Boolean(finalCoverImage);\nconst marbleBody = { ...(base.marbleBody || {}) };\nif (finalCoverImage) marbleBody.coverImage = finalCoverImage;\nelse delete marbleBody.coverImage;\n\nlet imageCreditAppended = false;\nconst appendImageCredit = envBool('APPEND_COVER_IMAGE_CREDIT', true);\nconst creditUrl = normalizeHttpUrl(base.imageContextUrl, siteUrl);\nif (imageProxyVerified && appendImageCredit && creditUrl && typeof marbleBody.content === 'string') {\n  const creditMarker = 'data-cover-image-credit=\"google-cse\"';\n  if (!marbleBody.content.includes(creditMarker)) {\n    const creditLabel = escapeHtml(base.imageSourceTitle || base.imageSourceHost || 'source page');\n    marbleBody.content += `<p ${creditMarker}><em>Cover image source: <a href=\"${escapeHtml(creditUrl)}\" target=\"_blank\" rel=\"noopener noreferrer external nofollow\">${creditLabel}</a>.</em></p>`;\n    imageCreditAppended = true;\n  }\n}\n\nlet shouldPublish = base.shouldPublish === true;\nlet status = base.status;\nlet blockingReason = base.blockingReason || '';\nif (shouldPublish && base.requireGoogleImage === true && !imageProxyVerified) {\n  shouldPublish = false;\n  status = 'google_image_required_but_unavailable';\n  blockingReason = base.imageSelectionError || base.googleImageCredentialError || 'A verified Google image was required, but Google search or the same-origin proxy did not produce one.';\n}\nif (shouldPublish && requireCoverImage && !coverImageReady) {\n  shouldPublish = false;\n  status = 'cover_image_required_but_unavailable';\n  blockingReason = base.imageSelectionError || 'A verified or fallback cover image was required, but none was available.';\n}\n\nreturn [{ json: {\n  ...base,\n  shouldPublish,\n  status,\n  blockingReason,\n  coverImageReady,\n  coverImage: finalCoverImage || null,\n  coverImageSource,\n  imageProxyVerified,\n  imageProxyStatusCode: proxyStatusCode || null,\n  imageProxyContentType: proxyContentType || '',\n  imageProxyContentLength: proxyContentLength || 0,\n  imageProxyFailureReason: imageProxyVerified ? '' : (\n    isProxyResponse\n      ? `Image proxy check failed: HTTP ${proxyStatusCode || 'unknown'}, content-type ${proxyContentType || 'missing'}, content-length ${proxyContentLength || 'missing'}.`\n      : (base.imageSelectionError || base.googleImageCredentialError || 'Google image proxy was not attempted.')\n  ),\n  imageCreditAppended,\n  marbleBody\n} }];"
+      },
+      "id": "93400ffc-a6d8-4059-9dde-fe84949c5e14",
+      "name": "Finalize Verified Cover Image",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2960,
+        -450
+      ],
+      "notes": "Only puts the verified same-origin proxy URL into Marble. If verification fails, it falls back to a configured URL or /images/blog/default-cover.svg; coverImage:null is never sent."
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "575038b3-0fbe-4802-8d27-c1341fd6e483",
+              "leftValue": "={{$json.shouldPublish}}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "128e45f4-a4bc-4ca7-96df-7e4250991b55",
+      "name": "Image Ready to Publish?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        3220,
+        -450
+      ],
+      "notes": "If REQUIRE_COVER_IMAGE=true and no verified/fallback image exists, the workflow returns a clear skipped result instead of publishing a broken post."
     }
   ],
   "pinData": {},
@@ -1038,7 +1284,7 @@
       "main": [
         [
           {
-            "node": "Check Existing Marble Post",
+            "node": "Prepare Google Image Search",
             "type": "main",
             "index": 0
           }
@@ -1208,16 +1454,136 @@
           }
         ]
       ]
+    },
+    "Prepare Google Image Search": {
+      "main": [
+        [
+          {
+            "node": "Has Google Image Search Credentials?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Google Image Search Credentials?": {
+      "main": [
+        [
+          {
+            "node": "Google Custom Image Search",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Use Safe Cover Fallback",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Custom Image Search": {
+      "main": [
+        [
+          {
+            "node": "Select Relevant Google Image",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Select Relevant Google Image": {
+      "main": [
+        [
+          {
+            "node": "Has Relevant Google Image?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Relevant Google Image?": {
+      "main": [
+        [
+          {
+            "node": "Verify Same-Origin Image Proxy",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Use Safe Cover Fallback",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verify Same-Origin Image Proxy": {
+      "main": [
+        [
+          {
+            "node": "Finalize Verified Cover Image",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Use Safe Cover Fallback": {
+      "main": [
+        [
+          {
+            "node": "Finalize Verified Cover Image",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Finalize Verified Cover Image": {
+      "main": [
+        [
+          {
+            "node": "Image Ready to Publish?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Image Ready to Publish?": {
+      "main": [
+        [
+          {
+            "node": "Check Existing Marble Post",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Dry Run or Skipped Output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "active": false,
   "settings": {
     "executionOrder": "v1"
   },
-  "versionId": "3aa65ee4-6e5e-40c1-b877-e3e8750dedb4",
+  "versionId": "c7ce26c1-d84b-4067-9acd-eebe31f304da",
   "meta": {
     "templateCredsSetupCompleted": true,
-    "enhancedBy": "ChatGPT workflow edit v8.0: optional safe cover images, idempotent Marble upsert, read-after-write verification, cache revalidation, and public 404/server-error verification"
+    "enhancedBy": "ChatGPT workflow edit v8.1: Google Programmable Search image discovery, licensed-source filtering, same-origin image proxy verification, cover-image fallback, idempotent Marble upsert, revalidation, and public 404/server-error verification"
   },
   "tags": []
 }

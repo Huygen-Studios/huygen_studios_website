@@ -1,45 +1,61 @@
 import { NextRequest, NextResponse } from "next/server";
 import { revalidatePath, revalidateTag } from "next/cache";
-import { encodeBlogSlug, normalizeBlogSlug } from "@/lib/blog/normalize";
+import { encodeBlogSlug } from "@/lib/blog/normalize";
+import { isValidRevalidationPath } from "../../../lib/blog/cover-image";
 
 function authenticate(req: NextRequest): boolean {
-  const revalidateSecret = process.env.MARBLE_REVALIDATE_SECRET;
-  if (!revalidateSecret) return false;
+  const secretCandidates = [
+    process.env.HUYGEN_REVALIDATE_SECRET,
+    process.env.REVALIDATE_SECRET,
+    process.env.MARBLE_REVALIDATE_SECRET
+  ].filter(Boolean);
+
+  if (secretCandidates.length === 0) return false;
 
   const { searchParams } = new URL(req.url);
   const paramSecret = searchParams.get("secret");
   const headerSecret = req.headers.get("x-revalidate-secret");
 
-  return paramSecret === revalidateSecret || headerSecret === revalidateSecret;
+  return secretCandidates.some(secret => paramSecret === secret || headerSecret === secret);
 }
 
+function hasConfiguredSecret(): boolean {
+  return Boolean(
+    process.env.HUYGEN_REVALIDATE_SECRET ||
+    process.env.REVALIDATE_SECRET ||
+    process.env.MARBLE_REVALIDATE_SECRET
+  );
+}
+
+
+
 function applyBlogRevalidation(slug: string | null, customPaths: string[] | null) {
-  const normalizedSlug = normalizeBlogSlug(slug);
-  const paths = customPaths && customPaths.length > 0 ? customPaths : ["/blog", "/sitemap.xml"];
+  const paths = ["/blog", "/sitemap.xml"];
   const tags = ["marble-posts"];
 
-  // Revalidate tags
+  revalidatePath("/blog");
+  revalidatePath("/sitemap.xml");
   revalidateTag("marble-posts", "max");
-  if (normalizedSlug) {
-    revalidateTag(`marble-post:${normalizedSlug}`, "max");
-    tags.push(`marble-post:${normalizedSlug}`);
+
+  if (slug) {
+    const postPath = `/blog/${encodeBlogSlug(slug)}`;
+    revalidatePath(postPath);
+    revalidateTag(`marble-post:${slug}`, "max");
+    paths.push(postPath);
+    tags.push(`marble-post:${slug}`);
   }
 
-  // Revalidate paths
-  for (const path of paths) {
-    revalidatePath(path);
-  }
-
-  // Ensure targeted slug path is also explicitly revalidated
-  if (normalizedSlug) {
-    const postPath = `/blog/${encodeBlogSlug(normalizedSlug)}`;
-    if (!paths.includes(postPath)) {
-      revalidatePath(postPath);
-      paths.push(postPath);
+  // Also support additional dynamic custom paths if passed
+  if (customPaths && customPaths.length > 0) {
+    for (const path of customPaths) {
+      if (isValidRevalidationPath(path) && !paths.includes(path)) {
+        revalidatePath(path);
+        paths.push(path);
+      }
     }
   }
 
-  return { slug: normalizedSlug || null, paths, tags };
+  return { slug: slug || null, paths, tags };
 }
 
 async function readRevalidationParams(req: NextRequest): Promise<{ slug: string | null; paths: string[] | null }> {
@@ -84,18 +100,16 @@ function unauthorizedResponse() {
 
 export async function POST(req: NextRequest) {
   try {
-    if (!process.env.MARBLE_REVALIDATE_SECRET) return missingSecretResponse();
+    if (!hasConfiguredSecret()) return missingSecretResponse();
     if (!authenticate(req)) return unauthorizedResponse();
 
     const { slug, paths } = await readRevalidationParams(req);
     const result = applyBlogRevalidation(slug, paths);
 
     return NextResponse.json({
-      revalidated: true,
-      revalidatedSlug: result.slug,
-      paths: result.paths,
-      tags: result.tags,
-      timestamp: Date.now(),
+      ok: true,
+      revalidated: result.paths,
+      timestamp: new Date().toISOString(),
     });
   } catch (error) {
     console.error("Error during manual cache revalidation:", error);
@@ -109,19 +123,16 @@ export async function POST(req: NextRequest) {
 // Support GET requests for easy browser-based testing/integration checks
 export async function GET(req: NextRequest) {
   try {
-    if (!process.env.MARBLE_REVALIDATE_SECRET) return missingSecretResponse();
+    if (!hasConfiguredSecret()) return missingSecretResponse();
     if (!authenticate(req)) return unauthorizedResponse();
 
     const { slug, paths } = await readRevalidationParams(req);
     const result = applyBlogRevalidation(slug, paths);
 
     return NextResponse.json({
-      revalidated: true,
-      revalidatedSlug: result.slug,
-      paths: result.paths,
-      tags: result.tags,
-      method: "GET",
-      timestamp: Date.now(),
+      ok: true,
+      revalidated: result.paths,
+      timestamp: new Date().toISOString(),
     });
   } catch (error) {
     console.error("Error during GET cache revalidation:", error);
