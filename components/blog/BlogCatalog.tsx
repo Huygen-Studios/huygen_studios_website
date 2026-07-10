@@ -7,6 +7,12 @@ import Image from "next/image";
 import { ArrowUpRight, Compass } from "lucide-react";
 import { BlogPost } from "@/lib/blog/types";
 
+export function getCategoryName(category: any): string {
+  if (!category) return "AI Automation";
+  if (typeof category === "string") return category;
+  return category.name || category.slug || "AI Automation";
+}
+
 interface BlogCatalogProps {
   posts: BlogPost[];
 }
@@ -87,7 +93,7 @@ function makeThumbnailTitle(fullTitle: string): string {
 function BlogVisual({ post, className = "aspect-[16/10]" }: { post: BlogPost; className?: string }) {
   const imageUrl = getPostCoverImage(post);
   const title = post.title || "Untitled article";
-  const category = post.category || "AI Automation";
+  const category = getCategoryName(post.category);
 
   if (imageUrl) {
     return (
@@ -164,7 +170,7 @@ function BlogCard({ post }: { post: BlogPost }) {
   const title = post.title || "Untitled article";
   const description = post.description || "";
   const slug = post.slug;
-  const category = post.category || "AI Automation";
+  const category = getCategoryName(post.category);
   const readingTime = post.readingTime || "3 min read";
 
   let formattedDate = "Recent";
@@ -209,7 +215,7 @@ function BlogCard({ post }: { post: BlogPost }) {
 function CompactBlogCard({ post }: { post: BlogPost }) {
   const title = post.title || "Untitled article";
   const slug = post.slug;
-  const category = post.category || "AI Automation";
+  const category = getCategoryName(post.category);
   const readingTime = post.readingTime || "3 min read";
 
   let formattedDate = "Recent";
@@ -251,7 +257,7 @@ export function BlogCatalog({ posts }: BlogCatalogProps) {
   const filteredPosts = useMemo(() => {
     if (activeCategory === "All") return posts;
     return posts.filter(
-      (p) => p.category?.toLowerCase() === activeCategory.toLowerCase()
+      (p) => p.category && p.category.name.toLowerCase() === activeCategory.toLowerCase()
     );
   }, [posts, activeCategory]);
 
@@ -260,7 +266,7 @@ export function BlogCatalog({ posts }: BlogCatalogProps) {
     if (posts.length === 0) return { featuredPost: null, secondaryFeatured: [] };
 
     // Find any post containing a 'featured' tag or fallback to latest
-    const featured = posts.find((p) => p.tags?.some((t) => t.toLowerCase() === "featured")) || posts[0];
+    const featured = posts.find((p) => p.tags?.some((t) => t.name.toLowerCase() === "featured")) || posts[0];
     const others = posts.filter((p) => p.id !== featured.id).slice(0, 2);
 
     return {
@@ -270,7 +276,7 @@ export function BlogCatalog({ posts }: BlogCatalogProps) {
   }, [posts]);
 
   // Dynamic date rendering helper for large featured card
-  const getFormattedDate = (dateStr?: string) => {
+  const getFormattedDate = (dateStr?: string | null) => {
     if (!dateStr) return "Recent";
     try {
       const d = new Date(dateStr);
@@ -339,7 +345,7 @@ export function BlogCatalog({ posts }: BlogCatalogProps) {
                 <div className="space-y-4">
                   <div className="flex flex-wrap items-center gap-3 text-xs font-mono text-[#93969e]">
                     <span className="px-3 py-1 rounded-full border border-blue-500/20 bg-blue-500/5 text-blue-400 font-bold uppercase tracking-wider text-[10px]">
-                      {featuredPost.category}
+                      {getCategoryName(featuredPost.category)}
                     </span>
                     <span>•</span>
                     <span>{getFormattedDate(featuredPost.publishedAt)}</span>

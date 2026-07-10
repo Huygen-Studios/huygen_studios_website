@@ -30,12 +30,13 @@ export const localFallbackPosts: BlogPost[] = [
     `,
     publishedAt: "2026-07-08T09:00:00Z",
     updatedAt: "2026-07-08T09:00:00Z",
-    author: {
+    authors: [{
       name: "Huygen Engineering",
       role: "AI Automation Team"
-    },
-    category: "AI Automation",
-    tags: ["LLM", "Voice Agents", "Twilio", "Automation"],
+    }],
+    category: { name: "AI Automation" },
+    tags: ["LLM", "Voice Agents", "Twilio", "Automation"].map((name) => ({ name })),
+    coverImage: null,
     readingTime: "4 min read",
     canonicalUrl: "https://www.huygenstudios.com/blog/automating-enterprise-workflows-llm-voice-agents"
   },
@@ -44,6 +45,7 @@ export const localFallbackPosts: BlogPost[] = [
     slug: "optimizing-nextjs-webgl-threejs-performance",
     title: "Optimizing Next.js for WebGL and 3D Interaction Performance",
     description: "A technical guide to pre-rendering, code splitting, and managing memory usage in React Three Fiber scenes.",
+    contentHtml: "",
     contentMarkdown: `
 Enterprise digital experiences increasingly rely on WebGL and Three.js to provide interactive 3D elements. However, raw WebGL assets, heavy 3D mesh files, and WebGL context allocations can quickly slow down page loading times, block main-thread rendering, and hurt search engine indexability.
 
@@ -58,12 +60,13 @@ We compress heavy GLTF/GLB models using tools like Draco compression and meshopt
     `,
     publishedAt: "2026-07-05T10:00:00Z",
     updatedAt: "2026-07-05T10:00:00Z",
-    author: {
+    authors: [{
       name: "Huygen Design & Frontend Teams",
       role: "Creative Developers"
-    },
-    category: "Web Development",
-    tags: ["Next.js", "WebGL", "Three.js", "Performance"],
+    }],
+    category: { name: "Web Development" },
+    tags: ["Next.js", "WebGL", "Three.js", "Performance"].map((name) => ({ name })),
+    coverImage: null,
     readingTime: "3 min read",
     canonicalUrl: "https://www.huygenstudios.com/blog/optimizing-nextjs-webgl-threejs-performance"
   },
@@ -86,12 +89,13 @@ We compress heavy GLTF/GLB models using tools like Draco compression and meshopt
     `,
     publishedAt: "2026-06-28T08:00:00Z",
     updatedAt: "2026-06-28T08:00:00Z",
-    author: {
+    authors: [{
       name: "Huygen Automation",
       role: "Integration Engineers"
-    },
-    category: "AI Automation",
-    tags: ["WhatsApp Cloud API", "Security", "CRM", "Lead Gen"],
+    }],
+    category: { name: "AI Automation" },
+    tags: ["WhatsApp Cloud API", "Security", "CRM", "Lead Gen"].map((name) => ({ name })),
+    coverImage: null,
     readingTime: "5 min read",
     canonicalUrl: "https://www.huygenstudios.com/blog/secure-lead-qualification-whatsapp-cloud-api"
   }

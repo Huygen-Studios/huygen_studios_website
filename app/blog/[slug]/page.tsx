@@ -4,12 +4,14 @@ import Link from "next/link";
 import DOMPurify from "isomorphic-dompurify";
 import { marked } from "marked";
 import { SecondaryPageLayout } from "@/components/web3/SecondaryPageLayout";
-import { getBlogPosts, getBlogPostBySlug } from "@/lib/blog";
+import { encodeBlogSlug, getBlogPosts, getBlogPostBySlug, normalizeBlogSlug } from "@/lib/blog";
 import { BlogPost } from "@/lib/blog/types";
 
 interface PostPageProps {
   params: Promise<{ slug: string }>;
 }
+
+export const dynamicParams = true;
 
 export async function generateStaticParams() {
   const posts = await getBlogPosts();
@@ -19,29 +21,31 @@ export async function generateStaticParams() {
 }
 
 export async function generateMetadata({ params }: PostPageProps): Promise<Metadata> {
-  const { slug } = await params;
+  const { slug: rawSlug } = await params;
+  const slug = normalizeBlogSlug(rawSlug);
   try {
     const post = await getBlogPostBySlug(slug);
     if (!post) return {};
 
     const title = post.title || "Untitled Article";
     const description = post.description || "";
-    const publishedTime = post.publishedAt || new Date().toISOString();
+    const publishedTime = post.publishedAt || undefined;
     const modifiedTime = post.updatedAt || publishedTime;
-    const authorName = post.author?.name || "Huygen Team";
+    const authorName = post.authors[0]?.name || "Huygen Team";
 
     // Handle OpenGraph image safely
-    const coverImageUrl = post.coverImage || null;
+    const coverImageUrl = post.coverImage?.url || null;
     const ogImages = coverImageUrl ? [{ url: coverImageUrl }] : [];
+    const canonicalSlug = encodeBlogSlug(post.slug || slug);
 
     return {
       title: `${title} | Huygen Studios Blog`,
       description,
-      alternates: { canonical: `/blog/${post.slug || slug}` },
+      alternates: { canonical: `/blog/${canonicalSlug}` },
       openGraph: {
         title: `${title} | Huygen Studios Blog`,
         description,
-        url: `https://www.huygenstudios.com/blog/${post.slug || slug}`,
+        url: `https://www.huygenstudios.com/blog/${canonicalSlug}`,
         type: "article",
         publishedTime,
         modifiedTime,
@@ -58,13 +62,18 @@ export async function generateMetadata({ params }: PostPageProps): Promise<Metad
 }
 
 export default async function BlogPostPage({ params }: PostPageProps) {
-  const { slug } = await params;
+  const { slug: rawSlug } = await params;
+  const slug = normalizeBlogSlug(rawSlug);
   
   let post: BlogPost | null = null;
   try {
     post = await getBlogPostBySlug(slug);
   } catch (error) {
-    console.error(`Error loading blog post page for slug "${slug}":`, error);
+    console.error("Error loading blog post page", {
+      slug,
+      error,
+    });
+    throw error;
   }
 
   if (!post) {
@@ -89,7 +98,7 @@ export default async function BlogPostPage({ params }: PostPageProps) {
   if (post.contentHtml) {
     rawContentHtml = post.contentHtml;
   } else if (post.contentMarkdown) {
-    rawContentHtml = marked.parse(post.contentMarkdown) as string;
+    rawContentHtml = String(marked.parse(post.contentMarkdown));
   }
 
   // Clean raw HTML to demote h1 to h2
@@ -99,14 +108,21 @@ export default async function BlogPostPage({ params }: PostPageProps) {
         .replace(/<\/h1>/gi, "</h2>")
     : "";
 
-  const sanitizedContentHtml = DOMPurify.sanitize(cleanedHtml);
+  const sanitizedContentHtml = DOMPurify.sanitize(cleanedHtml, {
+    FORBID_TAGS: ["script", "iframe", "object", "embed"],
+    FORBID_ATTR: ["onerror", "onload", "onclick", "onmouseover", "style"],
+  }).replace(
+    /<a\s+([^>]*href=["']https?:\/\/(?![^"']*huygenstudios\.com)[^>]+)>/gi,
+    (match) => match.includes(" rel=") ? match : match.replace("<a ", '<a rel="noopener noreferrer" ')
+  );
 
   // JSON-LD structured data for article indexation
-  const authorName = post.author?.name || "Huygen Team";
+  const authorName = post.authors[0]?.name || "Huygen Team";
   const title = post.title || "Untitled Article";
   const description = post.description || "";
-  const publishedAt = post.publishedAt || new Date().toISOString();
+  const publishedAt = post.publishedAt || undefined;
   const updatedAt = post.updatedAt || publishedAt;
+  const canonicalSlug = encodeBlogSlug(post.slug || slug);
 
   const articleJsonLd = {
     "@context": "https://schema.org",
@@ -129,7 +145,7 @@ export default async function BlogPostPage({ params }: PostPageProps) {
     },
     "mainEntityOfPage": {
       "@type": "WebPage",
-      "@id": `https://www.huygenstudios.com/blog/${post.slug || slug}`
+      "@id": `https://www.huygenstudios.com/blog/${canonicalSlug}`
     }
   };
 
@@ -151,7 +167,8 @@ export default async function BlogPostPage({ params }: PostPageProps) {
   }
 
   // Safe image url
-  const coverImageUrl = post.coverImage || null;
+  const coverImage = post.coverImage;
+  const categoryName = post.category?.name || "AI Automation";
 
   return (
     <SecondaryPageLayout>
@@ -183,7 +200,7 @@ export default async function BlogPostPage({ params }: PostPageProps) {
                   <span>•</span>
                 </>
               )}
-              <span>Category: {post.category || "AI Automation"}</span>
+              <span>Category: {categoryName}</span>
             </div>
             <h1 className="text-3xl md:text-5xl font-bold tracking-tight leading-tight text-white mb-6">
               {title}
@@ -196,12 +213,12 @@ export default async function BlogPostPage({ params }: PostPageProps) {
           </header>
 
           {/* Render Cover Image safely if present */}
-          {coverImageUrl && (
+          {coverImage && (
             <div className="max-w-[850px] mb-12 rounded-lg overflow-hidden border border-[rgba(255,255,255,0.1)] aspect-[16/9] relative">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
-                src={coverImageUrl}
-                alt={title}
+                src={coverImage.url}
+                alt={coverImage.alt || title}
                 className="w-full h-full object-cover"
                 loading="eager"
               />
@@ -221,16 +238,16 @@ export default async function BlogPostPage({ params }: PostPageProps) {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 {relatedPosts.map((related) => (
                   <div key={related.slug} className="border border-[rgba(255,255,255,0.06)] p-6 rounded bg-[#0c0d10] hover:border-[rgba(74,121,255,0.25)] transition-all">
-                    <span className="text-xs font-mono text-[#93969e] block mb-2">{related.category || "AI Automation"}</span>
+                    <span className="text-xs font-mono text-[#93969e] block mb-2">{related.category?.name || "AI Automation"}</span>
                     <h3 className="text-lg font-bold text-white mb-3 hover:text-[#4a79ff] transition-colors">
-                      <Link href={`/blog/${related.slug}`}>{related.title || "Untitled Article"}</Link>
+                      <Link href={`/blog/${encodeBlogSlug(related.slug)}`}>{related.title || "Untitled Article"}</Link>
                     </h3>
                     {related.description && (
                       <p className="text-[#b8bac1] text-xs leading-relaxed mb-4 line-clamp-2">
                         {related.description}
                       </p>
                     )}
-                    <Link href={`/blog/${related.slug}`} className="text-white text-xs underline hover:text-[#4a79ff] transition-colors">
+                    <Link href={`/blog/${encodeBlogSlug(related.slug)}`} className="text-white text-xs underline hover:text-[#4a79ff] transition-colors">
                       Read More &rarr;
                     </Link>
                   </div>

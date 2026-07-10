@@ -9,8 +9,8 @@ This guide explains how to connect and configure **Marble CMS** as the primary h
 To enable Marble CMS, configure the following environment variables inside your deployment provider (such as Vercel) or your local `.env.local` file:
 
 ```env
-# Primary API Key from your Marble workspace settings (Read-only Public key starts with mpk_)
-MARBLE_API_KEY=mpk_dhhscGR89vKUO9HJLh8Xf1TW
+# Primary API key from your Marble workspace settings
+MARBLE_API_KEY=your_marble_api_key
 
 # Custom secure string secret used to validate webhook cache-invalidation payloads
 MARBLE_REVALIDATE_SECRET=your_custom_secure_secret_string
@@ -25,11 +25,10 @@ NEXT_PUBLIC_SITE_URL=https://www.huygenstudios.com
 
 ## 2. Setting Up Your Marble Workspace
 
-1. **Access Workspace:** Log into your dashboard at [Marble CMS](https://marblecms.com) using your workspace ID:
-   `cmqktdnak000004l4uwn2j7m0`
+1. **Access Workspace:** Log into your dashboard at [Marble CMS](https://marblecms.com).
 2. **Configure API Key:**
    - Go to **Settings** > **API Keys**.
-   - Create or retrieve your public API read key (`mpk_dhhscGR89vKUO9HJLh8Xf1TW`).
+   - Create or retrieve the server-side API read key and store it only as `MARBLE_API_KEY`.
 3. **Define Categories & Tags:**
    - Create a category matching the theme (e.g., `AI Automation` or `Web Development`).
    - Create appropriate tags (e.g., `Voice Agents`, `Next.js`).

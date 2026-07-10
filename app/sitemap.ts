@@ -1,5 +1,5 @@
 import type { MetadataRoute } from "next";
-import { getBlogPosts } from "@/lib/blog";
+import { encodeBlogSlug, getBlogPosts } from "@/lib/blog";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = "https://www.huygenstudios.com";
@@ -77,7 +77,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       }
 
       return {
-        url: `${baseUrl}/blog/${post.slug}`,
+        url: `${baseUrl}/blog/${encodeBlogSlug(post.slug)}`,
         lastModified: lastMod,
         changeFrequency: "monthly" as const,
         priority: 0.75,

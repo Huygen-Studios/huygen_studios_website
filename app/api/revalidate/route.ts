@@ -1,57 +1,77 @@
 import { NextRequest, NextResponse } from "next/server";
 import { revalidatePath, revalidateTag } from "next/cache";
+import { encodeBlogSlug, normalizeBlogSlug } from "@/lib/blog/normalize";
+
+function authenticate(req: NextRequest): boolean {
+  const revalidateSecret = process.env.MARBLE_REVALIDATE_SECRET;
+  if (!revalidateSecret) return false;
+
+  const { searchParams } = new URL(req.url);
+  const paramSecret = searchParams.get("secret");
+  const headerSecret = req.headers.get("x-revalidate-secret");
+
+  return paramSecret === revalidateSecret || headerSecret === revalidateSecret;
+}
+
+function applyBlogRevalidation(rawSlug?: string | null) {
+  const slug = normalizeBlogSlug(rawSlug);
+  const paths = ["/blog", "/sitemap.xml"];
+  const tags = ["marble-posts"];
+
+  revalidatePath("/blog");
+  revalidatePath("/sitemap.xml");
+  revalidateTag("marble-posts", "max");
+
+  if (slug) {
+    const postPath = `/blog/${encodeBlogSlug(slug)}`;
+    revalidatePath(postPath);
+    revalidateTag(`marble-post:${slug}`, "max");
+    paths.push(postPath);
+    tags.push(`marble-post:${slug}`);
+  }
+
+  return { slug: slug || null, paths, tags };
+}
+
+async function readPostSlug(req: NextRequest): Promise<string | null> {
+  const { searchParams } = new URL(req.url);
+  const querySlug = searchParams.get("slug");
+  if (querySlug) return querySlug;
+
+  try {
+    const body = await req.json();
+    return body?.slug || body?.post?.slug || body?.data?.slug || body?.entry?.slug || null;
+  } catch {
+    return null;
+  }
+}
+
+function missingSecretResponse() {
+  return NextResponse.json(
+    { error: "Revalidation secret is not configured on the server" },
+    { status: 500 }
+  );
+}
+
+function unauthorizedResponse() {
+  return NextResponse.json(
+    { error: "Unauthorized access: Invalid revalidation secret" },
+    { status: 401 }
+  );
+}
 
 export async function POST(req: NextRequest) {
   try {
-    const revalidateSecret = process.env.MARBLE_REVALIDATE_SECRET;
-    if (!revalidateSecret) {
-      return NextResponse.json(
-        { error: "Revalidation secret is not configured on the server" },
-        { status: 500 }
-      );
-    }
+    if (!process.env.MARBLE_REVALIDATE_SECRET) return missingSecretResponse();
+    if (!authenticate(req)) return unauthorizedResponse();
 
-    // Authenticate via query param or header
-    const { searchParams } = new URL(req.url);
-    const paramSecret = searchParams.get("secret");
-    const headerSecret = req.headers.get("x-revalidate-secret");
-
-    if (paramSecret !== revalidateSecret && headerSecret !== revalidateSecret) {
-      return NextResponse.json(
-        { error: "Unauthorized access: Invalid revalidation secret" },
-        { status: 401 }
-      );
-    }
-
-    // Parse JSON payload to check for dynamic article slug updates
-    let slug: string | undefined;
-    try {
-      const body = await req.json();
-      slug = body?.slug || body?.post?.slug || body?.data?.slug;
-    } catch {
-      // Allow fallback if no body or malformed payload is sent
-    }
-
-    // Always revalidate the blog catalog list
-    revalidatePath("/blog");
-    revalidateTag("marble-posts", "default");
-
-    // Also revalidate the canonical sitemap route
-    revalidatePath("/sitemap.xml");
-
-    // Revalidate specific post page if slug is provided
-    if (slug && typeof slug === "string") {
-      revalidatePath(`/blog/${slug}`);
-      revalidateTag(`marble-post-${slug}`, "default");
-      return NextResponse.json({
-        revalidated: true,
-        revalidatedSlug: slug,
-        timestamp: Date.now(),
-      });
-    }
+    const result = applyBlogRevalidation(await readPostSlug(req));
 
     return NextResponse.json({
       revalidated: true,
+      revalidatedSlug: result.slug,
+      paths: result.paths,
+      tags: result.tags,
       timestamp: Date.now(),
     });
   } catch (error) {
@@ -66,42 +86,15 @@ export async function POST(req: NextRequest) {
 // Support GET requests for easy browser-based testing/integration checks
 export async function GET(req: NextRequest) {
   try {
-    const revalidateSecret = process.env.MARBLE_REVALIDATE_SECRET;
-    if (!revalidateSecret) {
-      return NextResponse.json(
-        { error: "Revalidation secret is not configured on the server" },
-        { status: 500 }
-      );
-    }
+    if (!process.env.MARBLE_REVALIDATE_SECRET) return missingSecretResponse();
+    if (!authenticate(req)) return unauthorizedResponse();
 
-    const { searchParams } = new URL(req.url);
-    const secret = searchParams.get("secret");
-    const slug = searchParams.get("slug");
-
-    if (secret !== revalidateSecret) {
-      return NextResponse.json(
-        { error: "Unauthorized access: Invalid revalidation secret" },
-        { status: 401 }
-      );
-    }
-
-    revalidatePath("/blog");
-    revalidateTag("marble-posts", "default");
-    revalidatePath("/sitemap.xml");
-
-    if (slug) {
-      revalidatePath(`/blog/${slug}`);
-      revalidateTag(`marble-post-${slug}`, "default");
-      return NextResponse.json({
-        revalidated: true,
-        revalidatedSlug: slug,
-        method: "GET",
-        timestamp: Date.now(),
-      });
-    }
-
+    const result = applyBlogRevalidation(await readPostSlug(req));
     return NextResponse.json({
       revalidated: true,
+      revalidatedSlug: result.slug,
+      paths: result.paths,
+      tags: result.tags,
       method: "GET",
       timestamp: Date.now(),
     });
