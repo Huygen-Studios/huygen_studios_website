@@ -34,7 +34,8 @@ function applyBlogRevalidation(slug: string | null, customPaths: string[] | null
   const tags = ["marble-posts"];
 
   revalidatePath("/blog");
-  revalidatePath("/sitemap.xml");
+  // Use "layout" scope so Next.js properly invalidates the sitemap route
+  revalidatePath("/sitemap.xml", "layout");
   revalidateTag("marble-posts", "max");
 
   if (slug) {

@@ -6,6 +6,8 @@ import { BlogCatalog } from "@/components/blog/BlogCatalog";
 import { AnimatedReveal } from "@/components/animations/AnimatedReveal";
 import { AnimatedText } from "@/components/animations/AnimatedText";
 
+export const revalidate = 300;
+
 export const metadata: Metadata = {
   title: "Studio Blog & Insights | Huygen Studios",
   description:
@@ -31,7 +33,7 @@ export default async function BlogCatalogPage() {
           {/* Hero Section */}
           <div className="max-w-[800px] mb-12">
             <span className="text-blue-400 text-xs font-mono tracking-[0.2em] uppercase block mb-4">
-              BLOG // ORIGINAL RESEARCH
+              BLOG // INSIGHTS
             </span>
             <AnimatedText className="text-4xl md:text-6xl font-extrabold tracking-tight leading-none mb-6 font-sans">
               Ideas on AI automation, voice agents, and digital growth

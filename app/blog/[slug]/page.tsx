@@ -67,6 +67,13 @@ export async function generateMetadata({ params }: PostPageProps): Promise<Metad
         authors: [authorName],
         images: ogImages,
       },
+      twitter: {
+        card: "summary_large_image",
+        title: `${title} | Huygen Studios`,
+        description,
+        ...(ogImages.length > 0 ? { images: [ogImages[0].url] } : {}),
+        creator: "@huygenstudios",
+      },
     };
   } catch (error) {
     if (process.env.NODE_ENV === "development") {
@@ -95,13 +102,18 @@ export default async function BlogPostPage({ params }: PostPageProps) {
     notFound();
   }
 
-  // Get all posts to find related ones safely
+  // Get all posts to find related ones — prefer same category, then other posts
   let relatedPosts: BlogPost[] = [];
   try {
     const allPosts = await getBlogPosts();
-    relatedPosts = allPosts
-      .filter((p) => p && p.slug && p.slug !== slug)
-      .slice(0, 2);
+    const otherPosts = allPosts.filter((p) => p && p.slug && p.slug !== slug);
+    const sameCategory = otherPosts.filter(
+      (p) => p.category?.name && p.category.name === post.category?.name
+    );
+    const different = otherPosts.filter(
+      (p) => !sameCategory.some((s) => s.slug === p.slug)
+    );
+    relatedPosts = [...sameCategory, ...different].slice(0, 2);
   } catch (error) {
     if (process.env.NODE_ENV === "development") {
       console.warn("Failed to load related posts:", error);
@@ -152,13 +164,40 @@ export default async function BlogPostPage({ params }: PostPageProps) {
       "name": "Huygen Studios",
       "logo": {
         "@type": "ImageObject",
-        "url": "https://www.huygenstudios.com/logo.png"
+        "url": "https://www.huygenstudios.com/android-chrome-512x512.png",
+        "width": 512,
+        "height": 512
       }
     },
     "mainEntityOfPage": {
       "@type": "WebPage",
       "@id": `https://www.huygenstudios.com/blog/${canonicalSlug}`
     }
+  };
+
+  const breadcrumbJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      {
+        "@type": "ListItem",
+        "position": 1,
+        "name": "Home",
+        "item": "https://www.huygenstudios.com"
+      },
+      {
+        "@type": "ListItem",
+        "position": 2,
+        "name": "Blog",
+        "item": "https://www.huygenstudios.com/blog"
+      },
+      {
+        "@type": "ListItem",
+        "position": 3,
+        "name": title,
+        "item": `https://www.huygenstudios.com/blog/${canonicalSlug}`
+      }
+    ]
   };
 
   // Safe date parsing
@@ -188,6 +227,10 @@ export default async function BlogPostPage({ params }: PostPageProps) {
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(articleJsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
       />
 
       <article className="chapter">

@@ -1,8 +1,12 @@
 import type { MetadataRoute } from "next";
 import { encodeBlogSlug, getBlogPosts } from "@/lib/blog";
 
+export const revalidate = 300;
+
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = "https://www.huygenstudios.com";
+  // Last major content update — update this string when static pages change
+  const SITE_LAST_MODIFIED = "2026-07-10";
 
   // Core static pages (removed /creatives)
   const staticPages = [
@@ -40,7 +44,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
     return {
       url: `${baseUrl}${page}`,
-      lastModified: new Date(),
+      lastModified: SITE_LAST_MODIFIED,
       changeFrequency,
       priority,
     };

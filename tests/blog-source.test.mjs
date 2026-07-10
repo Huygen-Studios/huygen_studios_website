@@ -61,7 +61,8 @@ test("metadata and detail rendering handle missing optional values", () => {
 
 test("revalidation clears index, sitemap, list tag, and targeted article data", () => {
   assert.match(revalidateSource, /revalidatePath\("\/blog"\)/);
-  assert.match(revalidateSource, /revalidatePath\("\/sitemap\.xml"\)/);
+  // sitemap is revalidated with "layout" scope for correct App Router cache invalidation
+  assert.match(revalidateSource, /revalidatePath\("\/sitemap\.xml", "layout"\)/);
   assert.match(revalidateSource, /revalidateTag\("marble-posts", "max"\)/);
   assert.match(revalidateSource, /revalidatePath\(postPath\)/);
   assert.match(revalidateSource, /revalidateTag\(`marble-post:\$\{slug\}`, "max"\)/);

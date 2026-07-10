@@ -54,48 +54,14 @@ export const metadata: Metadata = {
     template: "%s | Huygen Studios",
   },
   description:
-    "Huygen Studios is the premier agency for elite AI automation, voice agents, and cinematic web experiences. We transform operational bottlenecks into intelligent, automated systems for forward-thinking businesses.",
+    "Huygen Studios is a technology and creative studio specialising in enterprise AI automation, voice systems, and cinematic web interfaces. We build custom AI calling agents, WhatsApp automations, and premium web experiences.",
   keywords: [
-    "Huygen Studios",
-    "premium AI automation agency",
+    "AI automation agency",
     "AI voice agents",
-    "outbound AI calling",
-    "WhatsApp chat automation",
-    "automated lead capture systems",
-    "cinematic web services",
-    "premium web development",
-    "drop-in business automation",
-    "SEO & growth agency",
-    "high-end video editing",
-    "creative digital experiences",
-    "AI lead qualification",
-    "business operating systems",
-    "custom AI infrastructure",
-    "AI customer service",
-    "AI chatbots",
-    "intelligent automation",
-    "B2B AI solutions",
-    "machine learning integration",
-    "workflow automation",
-    "digital transformation",
-    "award-winning web design",
-    "Next.js web development",
-    "custom software development",
-    "generative AI consulting",
-    "LLM integration",
-    "AI-powered SEO",
-    "marketing automation",
-    "conversion rate optimization",
-    "UI/UX design",
-    "branding and identity",
-    "3D web experiences",
-    "WebGL development",
-    "React development agency",
-    "SaaS development",
-    "enterprise AI",
-    "business intelligence",
-    "data-driven growth",
-    "AI sales assistants"
+    "WhatsApp automation",
+    "cinematic web development",
+    "enterprise AI integration",
+    "Next.js development agency",
   ],
   authors: [{ name: "Huygen Studios", url: "https://www.huygenstudios.com" }],
   creator: "Huygen Studios",
@@ -104,9 +70,6 @@ export const metadata: Metadata = {
     email: false,
     address: false,
     telephone: false,
-  },
-  alternates: {
-    canonical: "/",
   },
   openGraph: {
     title: "Huygen Studios | Premium AI Automation & Web Agency",
@@ -144,9 +107,9 @@ export const metadata: Metadata = {
       "max-snippet": -1,
     },
   },
-  verification: {
-    google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION || "",
-  },
+  ...(process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION
+    ? { verification: { google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION } }
+    : {}),
   other: {
     "google-adsense-account": "ca-pub-1790543418739606",
   },
@@ -157,11 +120,15 @@ const jsonLd = {
   "@type": "Organization",
   name: "Huygen Studios",
   url: "https://www.huygenstudios.com",
-  logo: "https://www.huygenstudios.com/skiper76.png",
-  description: "Premium agency for AI automation, voice agents, and cinematic web experiences.",
+  logo: {
+    "@type": "ImageObject",
+    url: "https://www.huygenstudios.com/android-chrome-512x512.png",
+    width: 512,
+    height: 512,
+  },
+  description: "Technology and creative studio specialising in enterprise AI automation, voice systems, and cinematic web interfaces.",
   contactPoint: {
     "@type": "ContactPoint",
-    telephone: "+91-9262102440",
     contactType: "customer service",
     email: "hello@huygenstudios.com",
     availableLanguage: ["English"]
@@ -180,10 +147,11 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${displayFont.variable} ${bodyFont.variable} antialiased`} suppressHydrationWarning>
       <head>
-        <meta name="google-adsense-account" content="ca-pub-1790543418739606" />
         {/* Prevent Dark Reader extension from causing hydration errors */}
         <meta name="color-scheme" content="dark" />
         <meta name="darkreader-lock" />
+        {/* RSS feed discovery */}
+        <link rel="alternate" type="application/rss+xml" title="Huygen Studios Blog" href="https://www.huygenstudios.com/rss.xml" />
         <Script
           id="js-enabled-script"
           strategy="beforeInteractive"
