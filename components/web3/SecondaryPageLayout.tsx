@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, ReactNode } from "react";
+import { useEffect, useRef, useState, ReactNode } from "react";
 import Link from "next/link";
-import { ArrowUpRight, Menu, X } from "lucide-react";
+import { Menu, X } from "lucide-react";
 import { TextRoll } from "../Button";
+import { AnimatedCta } from "../animations/AnimatedCta";
 
 interface SecondaryPageLayoutProps {
   children: ReactNode;
@@ -19,10 +20,56 @@ const nav = [
 ];
 
 export function SecondaryPageLayout({ children }: SecondaryPageLayoutProps) {
+  const rootRef = useRef<HTMLElement>(null);
   const [mobileOpen, setMobileOpen] = useState(false);
 
+  useEffect(() => {
+    const root = rootRef.current;
+    if (!root) return;
+
+    const getRollControl = (target: EventTarget | null) => {
+      return target instanceof Element
+        ? target.closest<HTMLElement>(".roll-control")
+        : null;
+    };
+
+    const handlePointerOver = (event: PointerEvent) => {
+      const rollControl = getRollControl(event.target);
+      if (rollControl && !rollControl.contains(event.relatedTarget as Node | null)) {
+        rollControl.classList.add("is-hovered");
+      }
+    };
+
+    const handlePointerOut = (event: PointerEvent) => {
+      const rollControl = getRollControl(event.target);
+      if (rollControl && !rollControl.contains(event.relatedTarget as Node | null)) {
+        rollControl.classList.remove("is-hovered");
+      }
+    };
+
+    const handleFocusIn = (event: FocusEvent) => {
+      getRollControl(event.target)?.classList.add("is-hovered");
+    };
+
+    const handleFocusOut = (event: FocusEvent) => {
+      getRollControl(event.target)?.classList.remove("is-hovered");
+    };
+
+    root.addEventListener("pointerover", handlePointerOver);
+    root.addEventListener("pointerout", handlePointerOut);
+    root.addEventListener("focusin", handleFocusIn);
+    root.addEventListener("focusout", handleFocusOut);
+
+    return () => {
+      root.removeEventListener("pointerover", handlePointerOver);
+      root.removeEventListener("pointerout", handlePointerOut);
+      root.removeEventListener("focusin", handleFocusIn);
+      root.removeEventListener("focusout", handleFocusOut);
+    };
+  }, []);
+
   return (
-    <main className="studio-root min-h-screen flex flex-col">
+    <main ref={rootRef} className="studio-root min-h-screen flex flex-col">
       {/* Skip to content — keyboard accessibility */}
       <a href="#main-content" className="skip-link">
         Skip to main content
@@ -39,9 +86,7 @@ export function SecondaryPageLayout({ children }: SecondaryPageLayoutProps) {
             </Link>
           ))}
         </nav>
-        <Link href="mailto:hello@huygenstudios.com" className="header-cta roll-control">
-          <TextRoll>Start a project</TextRoll> <ArrowUpRight size={15} />
-        </Link>
+        <AnimatedCta href="mailto:hello@huygenstudios.com" label="Start a project" className="header-cta roll-control" />
         <button
           className="menu-toggle"
           aria-label="Open navigation"

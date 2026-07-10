@@ -3,6 +3,8 @@ import { SecondaryPageLayout } from "@/components/web3/SecondaryPageLayout";
 import { getBlogPosts } from "@/lib/blog";
 import { BlogPost } from "@/lib/blog/types";
 import { BlogCatalog } from "@/components/blog/BlogCatalog";
+import { AnimatedReveal } from "@/components/animations/AnimatedReveal";
+import { AnimatedText } from "@/components/animations/AnimatedText";
 
 export const metadata: Metadata = {
   title: "Studio Blog & Insights | Huygen Studios",
@@ -31,12 +33,12 @@ export default async function BlogCatalogPage() {
             <span className="text-blue-400 text-xs font-mono tracking-[0.2em] uppercase block mb-4">
               BLOG // ORIGINAL RESEARCH
             </span>
-            <h1 className="text-4xl md:text-6xl font-extrabold tracking-tight leading-none mb-6 font-sans">
+            <AnimatedText className="text-4xl md:text-6xl font-extrabold tracking-tight leading-none mb-6 font-sans">
               Ideas on AI automation, voice agents, and digital growth
-            </h1>
-            <p className="text-base md:text-lg text-[#b8bac1] leading-relaxed">
+            </AnimatedText>
+            <AnimatedReveal as="p" delay={0.18} className="blog-supporting-copy text-base md:text-lg text-[#b8bac1] leading-relaxed">
               Practical insights on AI systems, automation workflows, CRM & sales pipelines, cinematic web strategy, and technical implementations.
-            </p>
+            </AnimatedReveal>
           </div>
 
           {/* Dynamic Interactive Catalog */}

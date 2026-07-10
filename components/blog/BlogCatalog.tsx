@@ -1,15 +1,11 @@
 "use client";
 
 import { useMemo, useRef, useState } from "react";
-import Link from "next/link";
 import Image from "next/image";
 import { ArrowUpRight, Compass } from "lucide-react";
-import gsap from "gsap";
-import { useGSAP } from "@gsap/react";
-import { encodeBlogSlug } from "@/lib/blog/normalize";
+import { gsap, useGSAP } from "../animations/gsap-client";
 import { BlogPost } from "@/lib/blog/types";
-
-gsap.registerPlugin(useGSAP);
+import { AnimatedBlogCard } from "./AnimatedBlogCard";
 
 interface BlogCatalogProps {
   posts: BlogPost[];
@@ -91,7 +87,7 @@ function BlogVisual({ post, className = "aspect-[16/10]" }: { post: BlogPost; cl
 
   if (imageUrl) {
     return (
-      <div className={`blog-card-visual relative overflow-hidden rounded-2xl group border border-white/5 ${className}`}>
+      <div className={`blog-card-visual relative overflow-hidden rounded-2xl border border-white/5 ${className}`}>
         <Image
           src={imageUrl}
           alt={post.coverImage?.alt || title}
@@ -158,7 +154,7 @@ function BlogCard({ post }: { post: BlogPost }) {
   const readingTime = post.readingTime || "3 min read";
 
   return (
-    <Link href={`/blog/${encodeBlogSlug(post.slug)}`} className="blog-card group flex flex-col gap-4 text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-blue-400">
+    <AnimatedBlogCard post={post} className="flex flex-col gap-4 text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-blue-400">
       <BlogVisual post={post} className="aspect-[16/10] w-full" />
       <div className="flex flex-col gap-2">
         <div className="flex items-center gap-3 text-xs font-mono text-[#93969e]">
@@ -177,7 +173,7 @@ function BlogCard({ post }: { post: BlogPost }) {
           </p>
         )}
       </div>
-    </Link>
+    </AnimatedBlogCard>
   );
 }
 
@@ -187,7 +183,7 @@ function CompactBlogCard({ post }: { post: BlogPost }) {
   const readingTime = post.readingTime || "3 min read";
 
   return (
-    <Link href={`/blog/${encodeBlogSlug(post.slug)}`} className="blog-card group flex gap-4 text-left items-start pb-4 border-b border-white/5 last:border-0 last:pb-0 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-blue-400">
+    <AnimatedBlogCard post={post} className="flex gap-4 text-left items-start pb-4 border-b border-white/5 last:border-0 last:pb-0 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-blue-400">
       <BlogVisual post={post} className="w-24 h-16 md:w-32 md:h-20 flex-shrink-0" />
       <div className="flex flex-col gap-1 justify-center min-w-0">
         <span className="text-[10px] font-mono text-blue-400 uppercase tracking-wider">{category}</span>
@@ -200,7 +196,7 @@ function CompactBlogCard({ post }: { post: BlogPost }) {
           <span>{readingTime}</span>
         </div>
       </div>
-    </Link>
+    </AnimatedBlogCard>
   );
 }
 
@@ -228,74 +224,40 @@ export function BlogCatalog({ posts }: BlogCatalogProps) {
   }, [posts]);
 
   useGSAP(() => {
-    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const cards = gsap.utils.toArray<HTMLElement>(".blog-card");
+    const media = gsap.matchMedia();
 
-    gsap.set(cards, { opacity: 1, clearProps: "visibility" });
-    gsap.set(".blog-card-image", { scale: 1, y: 0 });
-    gsap.set(".blog-card-overlay", { opacity: 0 });
+    media.add(
+      {
+        motion: "(prefers-reduced-motion: no-preference)",
+        reduced: "(prefers-reduced-motion: reduce)",
+      },
+      ({ conditions }) => {
+        const { motion, reduced } = conditions ?? {};
+        gsap.set(cards, { opacity: 1, y: 0 });
+        if (reduced || !motion) return;
 
-    if (reduceMotion) return;
+        gsap.fromTo(
+          cards,
+          { opacity: 0, y: 18 },
+          {
+            opacity: 1,
+            y: 0,
+            duration: 0.65,
+            stagger: 0.055,
+            ease: "power3.out",
+            clearProps: "transform,opacity",
+          },
+        );
+      },
+    );
 
-    gsap.from(cards, {
-      opacity: 0,
-      y: 18,
-      duration: 0.65,
-      stagger: 0.055,
-      ease: "power3.out",
-      clearProps: "opacity,transform",
-    });
-
-    const cleanups = cards.map((card) => {
-      const image = card.querySelector(".blog-card-image");
-      const visual = card.querySelector(".blog-card-visual");
-      const overlay = card.querySelector(".blog-card-overlay");
-      const title = card.querySelector(".blog-card-title");
-      const arrow = card.querySelector("svg");
-
-      const enter = () => {
-        gsap.to(visual, { y: -3, duration: 0.45, ease: "power3.out" });
-        gsap.to(image, { scale: 1.055, y: -4, duration: 0.65, ease: "power3.out" });
-        gsap.to(overlay, { opacity: 1, duration: 0.35, ease: "power2.out" });
-        gsap.to(title, { color: "#4a79ff", x: 2, duration: 0.35, ease: "power2.out" });
-        gsap.to(arrow, { x: 3, y: -3, duration: 0.35, ease: "power2.out" });
-      };
-
-      const leave = () => {
-        gsap.to(visual, { y: 0, duration: 0.45, ease: "power3.out" });
-        gsap.to(image, { scale: 1, y: 0, duration: 0.65, ease: "power3.out" });
-        gsap.to(overlay, { opacity: 0, duration: 0.35, ease: "power2.out" });
-        gsap.to(title, { color: "#ffffff", x: 0, duration: 0.35, ease: "power2.out" });
-        gsap.to(arrow, { x: 0, y: 0, duration: 0.35, ease: "power2.out" });
-      };
-      const pointerOver = (event: PointerEvent) => {
-        if (!card.contains(event.relatedTarget as Node | null)) enter();
-      };
-      const pointerOut = (event: PointerEvent) => {
-        if (!card.contains(event.relatedTarget as Node | null)) leave();
-      };
-
-      card.addEventListener("pointerenter", enter);
-      card.addEventListener("pointerleave", leave);
-      card.addEventListener("pointerover", pointerOver);
-      card.addEventListener("pointerout", pointerOut);
-      card.addEventListener("focus", enter);
-      card.addEventListener("blur", leave);
-
-      return () => {
-        card.removeEventListener("pointerenter", enter);
-        card.removeEventListener("pointerleave", leave);
-        card.removeEventListener("pointerover", pointerOver);
-        card.removeEventListener("pointerout", pointerOut);
-        card.removeEventListener("focus", enter);
-        card.removeEventListener("blur", leave);
-      };
-    });
-
-    return () => {
-      cleanups.forEach((cleanup) => cleanup());
-    };
-  }, { scope: catalogRef, dependencies: [filteredPosts.length, activeCategory] });
+    return () => media.revert();
+  }, {
+    scope: catalogRef,
+    dependencies: [filteredPosts.length, activeCategory],
+    revertOnUpdate: true,
+  });
 
   return (
     <div ref={catalogRef} className="space-y-16">
@@ -343,9 +305,9 @@ export function BlogCatalog({ posts }: BlogCatalogProps) {
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-stretch">
             <div className="lg:col-span-2 flex">
-              <Link
-                href={`/blog/${encodeBlogSlug(featuredPost.slug)}`}
-                className="blog-card group flex flex-col gap-6 p-6 rounded-3xl border border-white/5 bg-neutral-950/20 hover:border-blue-500/30 hover:bg-neutral-900/10 transition-all w-full justify-between focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-blue-400"
+              <AnimatedBlogCard
+                post={featuredPost}
+                className="flex flex-col gap-6 p-6 rounded-3xl border border-white/5 bg-neutral-950/20 w-full justify-between focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-blue-400"
               >
                 <BlogVisual post={featuredPost} className="aspect-[16/9] w-full" />
                 <div className="space-y-4">
@@ -366,11 +328,11 @@ export function BlogCatalog({ posts }: BlogCatalogProps) {
                       {featuredPost.description}
                     </p>
                   )}
-                  <div className="flex items-center text-sm text-white font-bold group-hover:text-blue-400 transition-colors pt-2">
-                    Read Article <ArrowUpRight size={16} className="ml-1" />
+                  <div className="flex items-center text-sm text-white font-bold pt-2">
+                    Read Article <ArrowUpRight size={16} className="blog-card-arrow ml-1" />
                   </div>
                 </div>
-              </Link>
+              </AnimatedBlogCard>
             </div>
 
             <div className="flex flex-col justify-between gap-6 p-6 rounded-3xl border border-white/5 bg-neutral-950/20">

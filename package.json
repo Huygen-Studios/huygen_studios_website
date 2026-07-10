@@ -8,9 +8,10 @@
   "scripts": {
     "dev": "next dev --webpack",
     "build": "next build",
-    "start": "next start -H 0.0.0.0 -p ${PORT:-3000}",
+    "start": "next start -H 0.0.0.0",
     "lint": "eslint",
-    "test": "node --experimental-strip-types --test tests/*.test.mjs"
+    "test": "node --experimental-strip-types --test tests/*.test.mjs",
+    "test:browser": "node --experimental-strip-types --test tests/blog-animations.test.mjs"
   },
   "dependencies": {
     "@gsap/react": "^2.1.2",
@@ -48,6 +49,7 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.2.4",
+    "playwright": "^1.61.1",
     "tailwindcss": "^4",
     "typescript": "^5"
   },

@@ -3,6 +3,11 @@ import { isPublishedCmsPost, normalizeBlogSlug, normalizeCmsPost } from "../blog
 import { MarbleApiError, marbleFetch } from "./client";
 
 type UnknownRecord = Record<string, unknown>;
+type MarblePagination = {
+  currentPage?: number;
+  totalPages?: number;
+  nextPage?: number | null;
+};
 
 function isRecord(value: unknown): value is UnknownRecord {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
@@ -25,25 +30,66 @@ function extractSinglePost(response: unknown): unknown | null {
   return response.post ?? response.data ?? response.item ?? null;
 }
 
+function extractPagination(response: unknown): MarblePagination | null {
+  if (!isRecord(response) || !isRecord(response.pagination)) return null;
+  return response.pagination;
+}
+
+function buildPostsEndpoint(page: number): string {
+  const params = new URLSearchParams({
+    limit: "100",
+    page: String(page),
+    order: "desc",
+    format: "html",
+    status: "published",
+  });
+
+  return `/posts?${params.toString()}`;
+}
+
+function buildPostEndpoint(slug: string): string {
+  const params = new URLSearchParams({
+    format: "html",
+    status: "published",
+  });
+
+  return `/posts/${encodeURIComponent(slug)}?${params.toString()}`;
+}
+
 type MarblePostsOptions = {
   fresh?: boolean;
 };
 
 export async function getMarblePosts(options: MarblePostsOptions = {}): Promise<BlogPost[]> {
-  const response = await marbleFetch<unknown>("/posts", {
-    ...(options.fresh
-      ? { cache: "no-store" }
-      : { next: { revalidate: 300, tags: ["marble-posts"] } }),
-  });
+  const allRawPosts: unknown[] = [];
+  let page = 1;
+  let totalPages = 1;
 
-  const posts = extractPostArray(response)
+  do {
+    const endpoint = buildPostsEndpoint(page);
+    const response = await marbleFetch<unknown>(endpoint, {
+      ...(options.fresh
+        ? { cache: "no-store" }
+        : { next: { revalidate: 300, tags: ["marble-posts"] } }),
+    });
+
+    allRawPosts.push(...extractPostArray(response));
+
+    const pagination = extractPagination(response);
+    totalPages = Math.min(Math.max(pagination?.totalPages ?? page, page), 20);
+    page = (pagination?.nextPage && pagination.nextPage > page)
+      ? pagination.nextPage
+      : page + 1;
+  } while (page <= totalPages);
+
+  const posts = allRawPosts
     .filter(isPublishedCmsPost)
     .map(normalizeCmsPost)
     .filter((post): post is BlogPost => Boolean(post));
 
   if (posts.length === 0) {
     console.warn("Marble CMS posts response produced no normalized published posts", {
-      responseWasObject: isRecord(response),
+      requestedFreshData: Boolean(options.fresh),
     });
   }
 
@@ -52,7 +98,7 @@ export async function getMarblePosts(options: MarblePostsOptions = {}): Promise<
 
 async function getMarblePostByDirectEndpoint(slug: string): Promise<BlogPost | null> {
   try {
-    const response = await marbleFetch<unknown>(`/posts/${encodeURIComponent(slug)}`, {
+    const response = await marbleFetch<unknown>(buildPostEndpoint(slug), {
       next: { revalidate: 300, tags: ["marble-posts", `marble-post:${slug}`] },
     });
 
@@ -79,14 +125,28 @@ export async function getMarblePostBySlug(rawSlug: string): Promise<BlogPost | n
   const slug = normalizeBlogSlug(rawSlug);
   if (!slug) return null;
 
-  // The catalog is sourced from /posts, so detail resolution starts from that same
-  // source of truth. This keeps n8n-published posts reachable even when Marble's
-  // per-slug endpoint lags or is unavailable for a newly created article.
+  let directError: unknown = null;
+  try {
+    const directPost = await getMarblePostByDirectEndpoint(slug);
+    if (directPost) return directPost;
+  } catch (error) {
+    directError = error;
+    console.warn("Marble direct post lookup failed; trying published posts list", {
+      slug,
+      error: error instanceof MarbleApiError
+        ? { status: error.status, statusText: error.statusText }
+        : error instanceof Error
+          ? { name: error.name, message: error.message }
+          : { name: "UnknownError" },
+    });
+  }
+
   const listedPost = await getMarblePostByListLookup(slug);
   if (listedPost) return listedPost;
 
   const freshListedPost = await getFreshMarblePostByListLookup(slug);
   if (freshListedPost) return freshListedPost;
 
-  return getMarblePostByDirectEndpoint(slug);
+  if (directError) throw directError;
+  return null;
 }
